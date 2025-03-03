@@ -1,0 +1,11 @@
+{
+    "name": "Sandbox",
+    "alias": "sandbox",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Sandbox\\app\\Providers\\SandboxServiceProvider"
+    ],
+    "files": []
+}
