@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 // use Modules\Sandbox\Database\Factories\AcademicYearModelFactory;
 
-class AcademicYearModel extends Model
+class GradeLevelsModel extends Model
 {
     use HasFactory;
 
@@ -16,9 +16,10 @@ class AcademicYearModel extends Model
     protected $fillable = [];
 
     protected $table = 'grade_levels';
+    
 
-    // protected static function newFactory(): AcademicYearModelFactory
+    // protected static function newFactory(): GradeLevelsFactory
     // {
-    //     // return AcademicYearModelFactory::new();
+    //     // return GradeLevelsFactory::new();
     // }
 }

@@ -8,10 +8,12 @@ use Illuminate\Support\ServiceProvider;
 use Modules\Dashboard\Policies\InnovationPolicy;
 use Modules\Dashboard\Policies\InnovationTypePolicy;
 use Modules\Dashboard\Policies\SchoolPolicy;
+use Modules\Dashboard\Policies\StudentNumberPolicy;
 use Modules\Dashboard\Policies\UserPolicy;
 use Modules\Sandbox\Models\InnovationsModel;
 use Modules\Sandbox\Models\InnovationTypesModel;
 use Modules\Sandbox\Models\SchoolModel;
+use Modules\Sandbox\Models\StudentNumberModel;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,5 +34,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(InnovationsModel::class, InnovationPolicy::class);
         Gate::policy(InnovationTypesModel::class, InnovationTypePolicy::class);
+        Gate::policy(StudentNumberModel::class, StudentNumberPolicy::class);
     }
 }

@@ -33,7 +33,7 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('website')->nullable();
             $table->integer('student_amount');
-            $table->integer('disadventaged_student_amount');
+            $table->integer('disadvantaged_student_amount');
             $table->integer('teacher_amount');
             $table->string('latitude')->nullable();
             $table->string('longitude')->nullable();

@@ -92,7 +92,7 @@
             }, {
                 label: 'จำนวนนักเรียนด้อยโอกาส',
                 // data: disadventage_student_amount,
-                data: @json($school_data->pluck('disadventaged_student_amount')),
+                data: @json($school_data->pluck('disadvantaged_student_amount')),
                 backgroundColor: 'rgba(255, 99, 132, 0.2)',
                 borderColor: 'rgba(255, 99, 132, 1)',
                 borderWidth: 1,

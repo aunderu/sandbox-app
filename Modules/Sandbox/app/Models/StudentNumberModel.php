@@ -13,11 +13,23 @@ class StudentNumberModel extends Model
     /**
      * The attributes that are mass assignable.
      */
-    protected $fillable = [];
+    protected $fillable = [
+        'school_id',
+        'year_id',
+        'education_year',
+        'male_count',
+        'female_count',
+    ];
 
     protected $table = 'student_number';
-    // protected static function newFactory(): StudentNumberModelFactory
-    // {
-    //     // return StudentNumberModelFactory::new();
-    // }
+
+    public function school()
+    {
+        return $this->belongsTo(SchoolModel::class, 'school_id', 'school_id');
+    }
+
+    public function grade()
+    {
+        return $this->belongsTo(GradeLevelsModel::class, 'year_id', 'id');
+    }
 }

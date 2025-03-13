@@ -18,4 +18,5 @@ use Modules\Sandbox\Http\Controllers\SandboxController;
 Route::group([], function () {
     Route::resource('sandbox', SandboxController::class)->names('sandbox');
     Route::get('/', [SandboxController::class, 'index']);
+    Route::get('/load-more-innovations', [InnovationController::class, 'loadMore'])->name('innovations.load_more');
 });

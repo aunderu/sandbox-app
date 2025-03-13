@@ -33,7 +33,7 @@
                     <div class="col-9 text-center">
                         <h5 class="card-title">นักเรียนทั้งหมด</h5>
                         <h1 class="card-text" style="font-weight: bold">
-                            {{ number_format($school_data->sum('student_amount') + $school_data->sum('disadventaged_student_amount')) }}
+                            {{ number_format($school_data->sum('student_amount') + $school_data->sum('disadvantaged_student_amount')) }}
                             <span class="custom-text">คน</span>
                         </h1>
                     </div>

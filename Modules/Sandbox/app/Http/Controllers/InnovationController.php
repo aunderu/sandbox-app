@@ -11,65 +11,31 @@ class InnovationController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function getInnovationData()
+    public function getInnovationData($perPage = 3)
     {
-        $innovations = InnovationsModel::with(['school', 'innovationType'])
+        $innovationData = InnovationsModel::with(['school', 'innovationType'])
             ->orderBy('created_at', 'desc')
-            ->get();
-            
-        return $innovations;
+            ->paginate($perPage);
+
+        return $innovationData;
     }
 
-    public function index()
+    public function loadMore(Request $request)
     {
-        return view('sandbox::index');
+        $page = $request->get('page', 1);
+        $perPage = 3;
+
+        $innovationData = InnovationsModel::with(['school', 'innovationType'])
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        // ส่งกลับเฉพาะ HTML ของรายการ
+        $view = view('sandbox::partials.innovation-items', ['innovationData' => $innovationData])->render();
+
+        return response()->json([
+            'html' => $view,
+            'next_page' => $innovationData->currentPage() < $innovationData->lastPage() ? $innovationData->currentPage() + 1 : null,
+        ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return view('sandbox::create');
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Show the specified resource.
-     */
-    public function show($id)
-    {
-        return view('sandbox::show');
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id)
-    {
-        return view('sandbox::edit');
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id)
-    {
-        //
-    }
 }

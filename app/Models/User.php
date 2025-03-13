@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
+use App\Traits\HasRoles;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -16,48 +18,8 @@ use Modules\Sandbox\Models\SchoolModel;
 class User extends Authenticatable implements FilamentUser, HasAvatar
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRoles;
 
-    const ROLE_SUPERADMIN = 'SUPERADMIN';
-    const ROLE_SCHOOLADMIN = 'SCHOOLADMIN';
-    const ROLE_OFFICER = 'OFFICER';
-
-    const ROLE_USER = 'USER';
-
-    const ROLE_DEFAULT = self::ROLE_USER;
-
-    const ROLES = [
-        self::ROLE_SUPERADMIN => 'Super Admin',
-        self::ROLE_SCHOOLADMIN => 'School Admin',
-        self::ROLE_OFFICER => 'Officer',
-        self::ROLE_USER => 'User',
-    ];
-
-    public function isSuperAdmin()
-    {
-        return $this->role === self::ROLE_SUPERADMIN;
-    }
-    public function isSchoolAdmin()
-    {
-        return $this->role === self::ROLE_SCHOOLADMIN;
-    }
-    public function isOfficer()
-    {
-        return $this->role === self::ROLE_OFFICER;
-    }
-    public function isUser()
-    {
-        return $this->role === self::ROLE_USER;
-    }
-
-    public function canAccessPanel(Panel $panel): bool
-    {
-        return $this->isSuperAdmin()
-            || $this->isSchoolAdmin()
-            || $this->isOfficer()
-            || $this->isUser();
-        // return true;
-    }
     /**
      * The attributes that are mass assignable.
      *
@@ -92,15 +54,38 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class,
         ];
     }
 
+    /**
+     * Determine if the user can access the given Filament panel.
+     *
+     * @param Panel $panel
+     * @return bool
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->isAdmin();
+        // ตัด isUser() ออกถ้าไม่ต้องการให้ผู้ใช้ทั่วไปเข้าถึง Panel
+    }
+
+    /**
+     * Get the user's avatar URL for Filament admin panel.
+     *
+     * @return string|null
+     */
     public function getFilamentAvatarUrl(): ?string
     {
         return $this->avatar_url ? Storage::url($this->avatar_url) : null;
     }
 
-    public function school()
+    /**
+     * Get the related school for this user.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function school(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(SchoolModel::class, 'school_id', 'school_id');
     }

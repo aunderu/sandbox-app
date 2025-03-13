@@ -1,7 +1,7 @@
 @extends('sandbox::layouts.master')
 
 @section('content')
-    <div class="container">
+    <div class="container-fluid">
         <div class="mt-3">
             <h1>Test Sandbox Hub</h1>
         </div>

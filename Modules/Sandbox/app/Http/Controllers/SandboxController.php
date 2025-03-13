@@ -5,12 +5,7 @@ namespace Modules\Sandbox\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Modules\Sandbox\Models\InnovationsModel;
-use Modules\Sandbox\Models\NtResultsModel;
-use Modules\Sandbox\Models\OnetNationalAvgModel;
-use Modules\Sandbox\Models\OnetProvinceAvgModel;
-use Modules\Sandbox\Models\OnetResultsModel;
-use Modules\Sandbox\Models\SchoolModel;
+use Modules\Sandbox\Models as Models;
 use Modules\Sandbox\Services\ResultProcessingService;
 
 class SandboxController extends Controller
@@ -27,12 +22,12 @@ class SandboxController extends Controller
      */
     public function index(Request $request)
     {
-        $school_data = SchoolModel::all();
+        $school_data = Models\SchoolModel::all();
 
-        $onet_result = OnetResultsModel::all();
-        $nt_result = NtResultsModel::all();
-        $onet_national_avg = OnetNationalAvgModel::all();
-        $onet_province_avg = OnetProvinceAvgModel::all();
+        $onet_result = Models\OnetResultsModel::all();
+        $nt_result = Models\NtResultsModel::all();
+        $onet_national_avg = Models\OnetNationalAvgModel::all();
+        $onet_province_avg = Models\OnetProvinceAvgModel::all();
 
         $student_sum_data = DB::table('student_number')->join('grade_levels', 'student_number.year_id', '=', 'grade_levels.id')->select('student_number.year_id', 'grade_levels.grade_name', DB::raw('SUM(student_number.male_count) as total_male_count'), DB::raw('SUM(student_number.female_count) as total_female_count'))->groupBy('student_number.year_id', 'grade_levels.grade_name')->get();
 
@@ -60,68 +55,20 @@ class SandboxController extends Controller
             }
         }
 
-         // 🔹 เรียกใช้งาน InnovationController
-         $innovationController = new InnovationController();
-         $innovationData = $innovationController->getInnovationData();
- 
-         return view('sandbox::index', compact(
-             'school_data',
-             'student_sum_data',
-             'locations',
-             'onet_result',
-             'onet_national_avg',
-             'onet_province_avg',
-             'onet_averages',
-             'nt_result',
-             'innovationData'
-         ));
-    }
+        // 🔹 เรียกใช้งาน InnovationController
+        $innovationController = new InnovationController();
+        $innovationData = $innovationController->getInnovationData(3);
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return view('sandbox::create');
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Show the specified resource.
-     */
-    public function show($id)
-    {
-        return view('sandbox::show');
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id)
-    {
-        return view('sandbox::edit');
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id)
-    {
-        //
+        return view('sandbox::index', compact(
+            'school_data',
+            'student_sum_data',
+            'locations',
+            'onet_result',
+            'onet_national_avg',
+            'onet_province_avg',
+            'onet_averages',
+            'nt_result',
+            'innovationData'
+        ));
     }
 }

@@ -14,10 +14,10 @@
         "jeffgreco13/filament-breezy": "^2.5",
         "laravel/framework": "^11.31",
         "laravel/tinker": "^2.9",
+        "maatwebsite/excel": "^3.1",
         "nesbot/carbon": "^3.8",
         "nwidart/laravel-modules": "^11.1",
-        "phattarachai/filament-thai-date-picker": "^1.5",
-        "pxlrbt/filament-excel": "^2.4"
+        "phattarachai/filament-thai-date-picker": "^1.5"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

@@ -2,17 +2,10 @@
 
 namespace Modules\Dashboard\Filament\Resources;
 
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Group;
-use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TagsInput;
-use Filament\Forms\Components\Textarea;
+use Carbon\Carbon;
+use Filament\Forms\Components as Component;
 use Filament\Support\Enums\IconPosition;
 use Filament\Tables\Filters\SelectFilter;
-use Modules\Dashboard\Filament\Resources\InnovationsResource\Pages;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Support\Enums\FontWeight;
@@ -24,6 +17,8 @@ use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
+
+use Modules\Dashboard\Filament\Resources\InnovationsResource\Pages;
 use Modules\Sandbox\Models\InnovationsModel;
 
 class InnovationsResource extends Resource
@@ -52,9 +47,9 @@ class InnovationsResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('ข้อมูลนวัตกรรม')
+                Component\Section::make('ข้อมูลนวัตกรรม')
                     ->schema([
-                        Select::make('school_id')->label(__('สถานศึกษา'))
+                        Component\Select::make('school_id')->label(__('สถานศึกษา'))
                             ->disabled(fn() => Auth::user()->isSchoolAdmin())
                             ->relationship('school', 'school_name_th')
                             ->prefix('โรงเรียน')
@@ -62,18 +57,31 @@ class InnovationsResource extends Resource
                             ->columnSpanFull()
                             ->required()
                             ->default(fn() => Auth::user()->school_id)
+                            ->searchPrompt('เพิ่มชื่อโรงเรียนเพื่อค้นหา...')
                             ->helperText(new HtmlString('กรณีที่ไม่มีชื่อโรงเรียนของท่านแสดง กรุณาติดต่อ<i><strong>ผู้ดูแลระบบ</strong></i>')),
-                        TextInput::make('inno_name')->label(__('ชื่อนวัตกรรม'))
+                        Component\Select::make('semester')->label('ภาคเรียน')
+                            ->options([
+                                0 => 'ตลอดปีการศึกษา',
+                                1 => 'ภาคเรียนที่ 1',
+                                2 => 'ภาคเรียนที่ 2',
+                            ])
+                            ->default(0)
+                            ->selectablePlaceholder(false)
+                            ->required(),
+                        Component\TextInput::make('inno_name')->label(__('ชื่อนวัตกรรม'))
                             ->minLength(3)->maxLength(255)
                             ->required(),
-                        Select::make('inno_type_id')->label('ประเภทนวัตกรรม')
+                        Component\Select::make('inno_type_id')->label('ประเภทนวัตกรรม')
                             ->relationship('innovationType', 'name')
                             ->required(),
-                        Textarea::make('inno_description')->label(__('รายละเอียด'))
-                            ->minLength(3)->maxLength(255)
+                        Component\RichEditor::make('inno_description')->label(__('รายละเอียด'))
+                            ->minLength(3)->maxLength(65535)
                             ->columnSpanFull()
+                            ->disableToolbarButtons([
+                                'attachFiles',
+                            ])
                             ->required(),
-                        TagsInput::make('tags')->label(__('แท็ก'))
+                        Component\TagsInput::make('tags')->label(__('แท็ก'))
                             ->nullable()
                             ->columnSpanFull()
                             ->suggestions([
@@ -83,20 +91,23 @@ class InnovationsResource extends Resource
                                 'พื้นที่นวัตกรรม',
                                 'สร้างสรรค์',
                             ]),
-                        Hidden::make('user_id')
+                        Component\Hidden::make('user_id')
                             ->default(fn() => Auth::id())
+                            ->required(),
+                        Component\Hidden::make('education_year')
+                            ->default(fn() => Carbon::now()->year + 543)
                             ->required(),
                     ])->columnSpan(2)->columns(2),
 
-                Group::make()->schema([
-                    Section::make('วีดีโอและไฟล์แนบ')
+                Component\Group::make()->schema([
+                    Component\Section::make('วีดีโอและไฟล์แนบ')
                         ->schema([
-                            TextInput::make('video_url')->label(__('ลิงค์วีดีโอ'))
+                            Component\TextInput::make('video_url')->label(__('ลิงค์วีดีโอ'))
                                 ->nullable()
                                 ->placeholder('https://www.youtube.com/watch?v=...')
                                 ->suffixIcon('heroicon-m-globe-alt')
                                 ->url(),
-                            FileUpload::make('attachments')
+                            Component\FileUpload::make('attachments')
                                 ->label(__('ไฟล์แนบนวัตกรรม'))
                                 ->acceptedFileTypes([
                                     'application/pdf',
@@ -124,11 +135,24 @@ class InnovationsResource extends Resource
     {
         return $table
             ->columns([
+
                 TextColumn::make('school.school_name_th')->label('สถานศึกษา')
                     ->sortable()
                     ->searchable()
                     ->toggleable()
                     ->formatStateUsing(fn($state) => 'โรงเรียน ' . $state),
+                TextColumn::make('semester')->label('ภาคเรียน')
+                    ->sortable()
+                    ->searchable()
+                    ->formatStateUsing(function ($state) {
+                        return match ((int) $state) {
+                            0 => 'ตลอดปีการศึกษา',
+                            1 => 'ภาคเรียนที่ 1',
+                            2 => 'ภาคเรียนที่ 2',
+                            default => 'ไม่ทราบ',
+                        };
+                    })
+                    ->toggleable(),
                 TextColumn::make('innovationType.name')->label('ประเภทนวัตกรรม')
                     ->sortable()
                     ->searchable()
@@ -138,7 +162,7 @@ class InnovationsResource extends Resource
                     ->sortable()
                     ->color('primary')
                     ->searchable()
-                    ->description(fn($record) => \Illuminate\Support\Str::limit($record->inno_description, 50))
+                    ->description(fn($record) => \Illuminate\Support\Str::limit(strip_tags($record->inno_description), 50))
                     ->toggleable(),
                 TextColumn::make('tags')->label('แท็ก')
                     // ->alignCenter()
@@ -206,5 +230,37 @@ class InnovationsResource extends Resource
             'create' => Pages\CreateInnovations::route('/create'),
             'edit' => Pages\EditInnovations::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Generate a new innovation ID.
+     */
+    public static function generateInnovationId($schoolId)
+    {
+        $year = Carbon::now()->format('y') + 43;
+        $latestInnovation = InnovationsModel::where('innovationID', 'like', $schoolId . $year . '%')
+            ->orderBy('innovationID', 'desc')
+            ->first();
+
+        if ($latestInnovation) {
+            $lastSequence = (int) substr($latestInnovation->innovationID, -4);
+            $newSequence = str_pad($lastSequence + 1, 4, '0', STR_PAD_LEFT);
+        } else {
+            $newSequence = '0001';
+        }
+
+        return $schoolId . $year . $newSequence;
+    }
+
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        // ถ้าเป็น SchoolAdmin ให้แสดงเฉพาะข้อมูลของโรงเรียนตนเอง
+        if (auth()->user()->isSchoolAdmin()) {
+            $query->where('school_id', auth()->user()->school_id);
+        }
+
+        return $query;
     }
 }

@@ -6,6 +6,8 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationBuilder;
+use Filament\Navigation\NavigationItem;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -23,6 +25,7 @@ use Filament\Navigation\MenuItem;
 use Filament\Navigation\NavigationGroup;
 use Illuminate\Support\Facades\Storage;
 use Jeffgreco13\FilamentBreezy\BreezyCore;
+use Modules\Sandbox\Models\SandboxModel;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -63,10 +66,12 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            ->navigationGroups([
-                'โรงเรียน',
-                'นวัตกรรม',
-                'ผู้ใช้งาน',
+            ->navigationItems([
+                NavigationItem::make('Sandbox')
+                    ->icon('heroicon-s-cube')
+                    ->url('/')
+                    ->sort(1)
+                    ->openUrlInNewTab(true)
             ])
             ->collapsibleNavigationGroups(false)
             ->plugins([
@@ -92,7 +97,6 @@ class AdminPanelProvider extends PanelProvider
                                 Storage::disk('public')->delete($file);
                             }),
                     )
-                    
                     ->enableTwoFactorAuthentication()
             ]);
     }

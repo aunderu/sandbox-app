@@ -3,6 +3,7 @@
 namespace Modules\Dashboard\Filament\Resources;
 
 use App\Models\User;
+use App\Enums\UserRole;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\ImageColumn;
@@ -72,7 +73,7 @@ class UsersResource extends Resource
                         ->visibleOn('create'),
                     Select::make('role')
                         ->label(__('Role'))
-                        ->options(User::ROLES)
+                        ->options(UserRole::getSelectOptions())
                         ->required()
                         ->reactive()
                         ->disabledOn('edit')
@@ -80,8 +81,8 @@ class UsersResource extends Resource
                     TextInput::make('school_id')->label(__('รหัสสถานศึกษา'))
                         ->minLength(3)->maxLength(255)
                         ->unique(ignoreRecord: true)
-                        ->visible(fn($get) => $get('role') === User::ROLE_SCHOOLADMIN)
-                        ->required(fn($get) => $get('role') === User::ROLE_SCHOOLADMIN)
+                        ->visible(fn($get) => $get('role') === UserRole::SCHOOLADMIN->value)
+                        ->required(fn($get) => $get('role') === UserRole::SCHOOLADMIN->value)
                         ->disabledOn('edit')
                         ->required(),
                 ]),
@@ -102,11 +103,12 @@ class UsersResource extends Resource
                 TextColumn::make('name'),
                 TextColumn::make('email')->icon('heroicon-m-envelope'),
                 TextColumn::make('role')
+                    ->formatStateUsing(fn(UserRole $state) => $state->getLabel())
                     ->badge()
                     ->color(fn(User $record) => match ($record->role) {
-                        User::ROLE_SUPERADMIN => 'danger',
-                        User::ROLE_SCHOOLADMIN => 'primary',
-                        User::ROLE_OFFICER => 'info',
+                        UserRole::SUPERADMIN => 'danger',
+                        UserRole::SCHOOLADMIN => 'primary',
+                        UserRole::OFFICER => 'info',
                         default => 'success',
                     }),
             ])
@@ -114,7 +116,7 @@ class UsersResource extends Resource
                 SelectFilter::make('role')
                     ->label('Role')
                     ->searchable()
-                    ->options(User::ROLES)
+                    ->options(UserRole::getSelectOptions())
             ])
             ->actions([Tables\Actions\EditAction::make()])
             ->bulkActions([Tables\Actions\BulkActionGroup::make([Tables\Actions\DeleteBulkAction::make()])]);

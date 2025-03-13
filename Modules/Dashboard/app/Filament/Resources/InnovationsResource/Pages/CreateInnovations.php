@@ -14,4 +14,10 @@ class CreateInnovations extends CreateRecord
     {
         return route('filament.admin.resources.innovations.index');
     }
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        $data['innovationID'] = InnovationsResource::generateInnovationId($data['school_id']);
+        return $data;
+    }
 }

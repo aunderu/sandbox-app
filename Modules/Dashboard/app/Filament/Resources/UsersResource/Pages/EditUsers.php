@@ -5,6 +5,7 @@ namespace Modules\Dashboard\Filament\Resources\UsersResource\Pages;
 use Modules\Dashboard\Filament\Resources\UsersResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Support\Facades\Auth;
 
 class EditUsers extends EditRecord
 {
@@ -13,7 +14,12 @@ class EditUsers extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->visible(function () {
+                    /** @var \App\Models\User $user */
+                    $user = Auth::user();
+                    return $user->isSuperAdmin();
+                }),
         ];
     }
 

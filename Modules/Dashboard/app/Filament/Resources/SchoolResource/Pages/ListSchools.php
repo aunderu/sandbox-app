@@ -2,6 +2,7 @@
 
 namespace Modules\Dashboard\Filament\Resources\SchoolResource\Pages;
 
+use App\Enums\UserRole;
 use Modules\Dashboard\Filament\Resources\SchoolResource;
 use Filament\Actions;
 use Filament\Resources\Components\Tab;
@@ -9,6 +10,7 @@ use Filament\Resources\Pages\ListRecords;
 use Modules\Sandbox\Models\SchoolModel;
 use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class ListSchools extends ListRecords
 {
@@ -17,7 +19,8 @@ class ListSchools extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->visible(fn() => Auth::user()->role === UserRole::SUPERADMIN || Auth::user()->role === UserRole::SCHOOLADMIN),
         ];
     }
     protected function paginateTableQuery(Builder $query): CursorPaginator

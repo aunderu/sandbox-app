@@ -26,6 +26,14 @@ class SchoolModel extends Model
         'school_course_type',
         'course_attachment',
         'original_filename',
+        'principal_prefix_code',
+        'principal_name_thai',
+        'principal_middle_name_thai',
+        'principal_lastname_thai',
+        'deputy_principal_prefix_code',
+        'deputy_principal_name_thai',
+        'deputy_principal_middle_name_thai',
+        'deputy_principal_lastname_thai',
         'house_id',
         'village_no',
         'road',
@@ -39,6 +47,9 @@ class SchoolModel extends Model
         'website',
         'latitude',
         'longitude',
+        'student_amount',
+        'disadvantaged_student_amount',
+        'teacher_amount',
     ];
 
     protected $table = 'school_data';
@@ -65,9 +76,9 @@ class SchoolModel extends Model
     }
 
     public function users()
-{
-    return $this->hasMany(User::class, 'school_id', 'school_id');
-}
+    {
+        return $this->hasMany(User::class, 'school_id', 'school_id');
+    }
     // protected static function newFactory(): SchoolModelFactory
     // {
     //     // return SchoolModelFactory::new();

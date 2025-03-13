@@ -2,29 +2,28 @@
 
 namespace Modules\Dashboard\Filament\Resources;
 
+use App\Enums\UserRole;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components as FilamentComponent;
 use Illuminate\Support\Facades as IlluminateFacade;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 
 use Filament\Tables;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
-use Illuminate\Contracts\Database\Eloquent\Builder;
-
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\HtmlString;
+use Maatwebsite\Excel\Facades\Excel;
 use Modules\Dashboard\Filament\Resources\SchoolResource\Pages;
-use Modules\Dashboard\Filament\Imports\SchoolModelImporter;
 use Modules\Dashboard\Filament\Resources\SchoolResource\RelationManagers\SchoolInnovationsRelationManager;
 use Modules\Sandbox\Models\SchoolModel;
 
 use Phattarachai\FilamentThaiDatePicker\ThaiDatePicker;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction as TablesExportBulkAction;
-use pxlrbt\FilamentExcel\Columns\Column;
-use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class SchoolResource extends Resource
 {
@@ -90,34 +89,215 @@ class SchoolResource extends Resource
         }
 
         return $form->schema([
+
             FilamentComponent\Wizard::make([
+
+                // STEP 1: ข้อมูลพื้นฐาน
                 FilamentComponent\Wizard\Step::make('ข้อมูลพื้นฐาน')
                     ->description('กรอกข้อมูลพื้นฐานของสถานศึกษา')
                     ->icon('heroicon-m-information-circle')
                     ->schema([
-                        FilamentComponent\TextInput::make('school_id')->label(__('รหัสสถานศึกษา'))->minLength(3)->maxLength(255)->unique(ignoreRecord: true)->required(),
-                        FilamentComponent\Grid::make(2)->schema([
-                            FilamentComponent\TextInput::make('school_name_th')->label(__('ชื่อสถานศึกษา (ไทย)'))->maxLength(255)->required(),
-                            FilamentComponent\TextInput::make('school_name_en')->label(__('ชื่อสถานศึกษา (อังกฤษ)'))->maxLength(255)->nullable()
-                        ]),
-                        FilamentComponent\Grid::make(3)->schema([
-                            FilamentComponent\TextInput::make('ministry')->label(__('สังกัดกระทรวง'))->maxLength(255)->required(),
-                            FilamentComponent\TextInput::make('department')->label(__('สังกัดสำนักงาน/กรม'))->maxLength(255)->nullable(),
-                            FilamentComponent\TextInput::make('area')->label(__('เขตพื้นที่การศึกษา'))->maxLength(255)->nullable()
-                        ]),
-                        FilamentComponent\Grid::make(2)->schema([
-                            FilamentComponent\Select::make('school_sizes')
-                                ->label(__('ประเภทสถานศึกษา (ขนาด)'))
-                                ->options([
-                                    'ขนาดใหญ่' => 'ขนาดใหญ่',
-                                    'ขนาดกลาง' => 'ขนาดกลาง',
-                                    'ขนาดเล็ก' => 'ขนาดเล็ก',
-                                ])
-                                ->required(),
-                            ThaiDatePicker::make('founding_date')->label(__('วันเดือนปีที่ก่อตั้ง'))->suffixIcon('heroicon-o-calendar')->nullable(),
-                        ]),
+                        FilamentComponent\TextInput::make('school_id')
+                            ->label(__('รหัสสถานศึกษา'))
+                            ->minLength(3)
+                            ->maxLength(255)
+                            ->unique(ignoreRecord: true)
+                            ->required(),
+
+                        FilamentComponent\Grid::make(2)
+                            ->schema([
+                                FilamentComponent\TextInput::make('school_name_th')
+                                    ->label(__('ชื่อสถานศึกษา (ไทย)'))
+                                    ->maxLength(255)
+                                    ->required(),
+
+                                FilamentComponent\TextInput::make('school_name_en')
+                                    ->label(__('ชื่อสถานศึกษา (อังกฤษ)'))
+                                    ->maxLength(255)
+                                    ->nullable(),
+                            ]),
+
+                        FilamentComponent\Grid::make(3)
+                            ->schema([
+                                FilamentComponent\Select::make('ministry')
+                                    ->label(__('สังกัดกระทรวง'))
+                                    ->options([
+                                        'กระทรวงศึกษาธิการ' => 'กระทรวงศึกษาธิการ',
+                                        'กระทรวงมหาดไทย' => 'กระทรวงมหาดไทย',
+                                        'สำนักงานคณะกรรมการส่งเสริมการศึกษาเอกชน' => 'สำนักงานคณะกรรมการส่งเสริมการศึกษาเอกชน',
+                                    ])
+                                    ->searchable()
+                                    ->allowHtml()
+                                    ->getSearchResultsUsing(function (string $search) {
+                                        $options = [
+                                            'กระทรวงศึกษาธิการ' => 'กระทรวงศึกษาธิการ',
+                                            'กระทรวงมหาดไทย' => 'กระทรวงมหาดไทย',
+                                            'สำนักงานคณะกรรมการส่งเสริมการศึกษาเอกชน' => 'สำนักงานคณะกรรมการส่งเสริมการศึกษาเอกชน',
+                                        ];
+
+                                        // กรองตัวเลือกตามคำค้นหา
+                                        return collect($options)
+                                            ->filter(fn($label) => str_contains(strtolower($label), strtolower($search)))
+                                            ->toArray();
+                                    })
+                                    ->createOptionForm([
+                                        FilamentComponent\TextInput::make('name')
+                                            ->label('ชื่อกระทรวง')
+                                            ->required()
+                                    ])
+                                    ->createOptionUsing(function (array $data) {
+                                        return $data['name'];
+                                    })
+                                    ->required(),
+
+                                FilamentComponent\Select::make('department')
+                                    ->label(__('สังกัดสำนักงาน/กรม'))
+                                    ->options([
+                                        'สำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน (สพฐ.)' => 'สำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน (สพฐ.)',
+                                        'สำนักงานการศึกษาเอกชนจังหวัดยะลา' => 'สำนักงานการศึกษาเอกชนจังหวัดยะลา',
+                                        'กรมส่งเสริมการปกครองท้องถิ่น' => 'กรมส่งเสริมการปกครองท้องถิ่น',
+                                        'องค์การบริหารส่วนจังหวัดยะลา' => 'องค์การบริหารส่วนจังหวัดยะลา',
+                                    ])
+                                    ->searchable()
+                                    ->allowHtml()
+                                    ->getSearchResultsUsing(function (string $search) {
+                                        $options = [
+                                            'สำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน (สพฐ.)' => 'สำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน (สพฐ.)',
+                                            'สำนักงานการศึกษาเอกชนจังหวัดยะลา' => 'สำนักงานการศึกษาเอกชนจังหวัดยะลา',
+                                            'กรมส่งเสริมการปกครองท้องถิ่น' => 'กรมส่งเสริมการปกครองท้องถิ่น',
+                                            'องค์การบริหารส่วนจังหวัดยะลา' => 'องค์การบริหารส่วนจังหวัดยะลา',
+                                        ];
+
+                                        return collect($options)
+                                            ->filter(fn($label) => str_contains(strtolower($label), strtolower($search)))
+                                            ->toArray();
+                                    })
+                                    ->createOptionForm([
+                                        FilamentComponent\TextInput::make('name')
+                                            ->label('ชื่อสำนักงาน/กรม')
+                                            ->required()
+                                    ])
+                                    ->createOptionUsing(function (array $data) {
+                                        return $data['name'];
+                                    }),
+
+                                FilamentComponent\Select::make('area')
+                                    ->label(__('เขตพื้นที่การศึกษา'))
+                                    ->options([
+                                        'เขต 1' => 'เขต 1',
+                                        'เขต 2' => 'เขต 2',
+                                        'เขต 3' => 'เขต 3',
+                                    ])
+                                    ->searchable()
+                                    ->allowHtml()
+                                    ->getSearchResultsUsing(function (string $search) {
+                                        $options = [
+                                            'เขต 1' => 'เขต 1',
+                                            'เขต 2' => 'เขต 2',
+                                            'เขต 3' => 'เขต 3',
+                                        ];
+
+                                        return collect($options)
+                                            ->filter(fn($label) => str_contains(strtolower($label), strtolower($search)))
+                                            ->toArray();
+                                    })
+                                    ->createOptionForm([
+                                        FilamentComponent\TextInput::make('name')
+                                            ->label('ชื่อเขตพื้นที่การศึกษา')
+                                            ->required()
+                                    ])
+                                    ->createOptionUsing(function (array $data) {
+                                        return $data['name'];
+                                    }),
+                            ]),
+
+                        FilamentComponent\Grid::make(2)
+                            ->schema([
+                                FilamentComponent\Select::make('school_sizes')
+                                    ->label(__('ประเภทสถานศึกษา (ขนาด)'))
+                                    ->options([
+                                        'ขนาดใหญ่' => 'ขนาดใหญ่',
+                                        'ขนาดกลาง' => 'ขนาดกลาง',
+                                        'ขนาดเล็ก' => 'ขนาดเล็ก',
+                                    ])
+                                    ->required(),
+
+                                ThaiDatePicker::make('founding_date')
+                                    ->label(__('วันเดือนปีที่ก่อตั้ง'))
+                                    ->suffixIcon('heroicon-o-calendar')
+                                    ->nullable(),
+                            ]),
                     ]),
 
+                // STEP 2: ข้อมูลบุคลากร
+                FilamentComponent\Wizard\Step::make('ข้อมูลบุคลากร')
+                    ->description('กรอกข้อมูลบุคลากรของสถานศึกษา')
+                    ->icon('heroicon-s-users')
+                    ->schema([
+                        FilamentComponent\Fieldset::make('ผู้อำนวยการ')
+                            ->label('ผู้อำนวยการ')
+                            ->schema([
+                                FilamentComponent\Grid::make(3)
+                                    ->schema([
+                                        FilamentComponent\Select::make('principal_prefix_code')
+                                            ->label(__('คำนำหน้า'))
+                                            ->options([
+                                                'นาย' => 'นาย',
+                                                'นาง' => 'นาง',
+                                                'นางสาว' => 'นางสาว',
+                                            ])
+                                            ->required(),
+                                    ]),
+
+                                FilamentComponent\Grid::make(3)
+                                    ->schema([
+                                        FilamentComponent\TextInput::make('principal_name_thai')
+                                            ->label(__('ชื่อจริง'))
+                                            ->required(),
+
+                                        FilamentComponent\TextInput::make('principal_middle_name_thai')
+                                            ->label(__('ชื่อกลาง'))
+                                            ->nullable(),
+
+                                        FilamentComponent\TextInput::make('principal_lastname_thai')
+                                            ->label(__('นามสกุล'))
+                                            ->required(),
+                                    ]),
+                            ]),
+
+                        FilamentComponent\Fieldset::make('รองผู้อำนวยการ')
+                            ->label('รองผู้อำนวยการ')
+                            ->schema([
+                                FilamentComponent\Grid::make(3)
+                                    ->schema([
+                                        FilamentComponent\Select::make('deputy_principal_prefix_code')
+                                            ->label(__('คำนำหน้า'))
+                                            ->options([
+                                                'นาย' => 'นาย',
+                                                'นาง' => 'นาง',
+                                                'นางสาว' => 'นางสาว',
+                                            ])
+                                            ->nullable(),
+                                    ]),
+
+                                FilamentComponent\Grid::make(3)
+                                    ->schema([
+                                        FilamentComponent\TextInput::make('deputy_principal_name_thai')
+                                            ->label(__('ชื่อจริง'))
+                                            ->nullable(),
+
+                                        FilamentComponent\TextInput::make('deputy_principal_middle_name_thai')
+                                            ->label(__('ชื่อกลาง'))
+                                            ->nullable(),
+
+                                        FilamentComponent\TextInput::make('deputy_principal_lastname_thai')
+                                            ->label(__('นามสกุล'))
+                                            ->nullable(),
+                                    ]),
+                            ]),
+                    ]),
+
+                // STEP 3: ข้อมูลที่อยู่
                 FilamentComponent\Wizard\Step::make('ข้อมูลที่อยู่')
                     ->description('กรอกข้อมูลที่อยู่ของสถานศึกษา')
                     ->icon('heroicon-s-map-pin')
@@ -200,6 +380,45 @@ class SchoolResource extends Resource
                                 }),
                         ]),
                     ]),
+
+                // STEP 4: รายละเอียดจำนวนประชากรในสถานศึกษา
+                FilamentComponent\Wizard\Step::make('รายละเอียดจำนวนประชากรในสถานศึกษา')
+                    ->description('กรอกข้อมูลจำนวนนักเรียนและบุคลากรของสถานศึกษา')
+                    ->icon('heroicon-s-user-group')
+                    ->schema([
+                        FilamentComponent\Grid::make(3)->schema([
+                            FilamentComponent\TextInput::make('student_amount')
+                                ->label('จำนวนนักเรียน')
+                                ->numeric()
+                                ->suffix('คน')
+                                ->required()
+                                ->minValue(0)
+                                ->helperText('กรอกจำนวนนักเรียนทั้งหมดในสถานศึกษา')
+                                ->validationAttribute('จำนวนนักเรียน'),
+
+                            FilamentComponent\TextInput::make('disadvantaged_student_amount')
+                                ->label('จำนวนนักเรียนด้อยโอกาส')
+                                ->numeric()
+                                ->suffix('คน')
+                                ->required()
+                                ->minValue(0)
+                                ->helperText('กรอกจำนวนนักเรียนด้อยโอกาสทั้งหมด')
+                                ->validationAttribute('จำนวนนักเรียนด้อยโอกาส'),
+
+                            FilamentComponent\TextInput::make('teacher_amount')
+                                ->label('จำนวนครู')
+                                ->numeric()
+                                ->suffix('คน')
+                                ->required()
+                                ->minValue(0)
+                                ->maxValue(500)
+                                ->helperText('กรอกจำนวนครูทั้งหมดในสถานศึกษา')
+                                ->validationAttribute('จำนวนครู'),
+                        ]),
+
+                    ]),
+
+                // STEP 5: หลักสูตรการศึกษา
                 FilamentComponent\Wizard\Step::make('หลักสูตรการศึกษาของสถานศึกษา')
                     ->description('กรอกข้อมูลหลักสูตรการศึกษาของสถานศึกษา')
                     ->icon('heroicon-m-academic-cap')
@@ -297,6 +516,53 @@ class SchoolResource extends Resource
                     ->toggleable(),
                 TextColumn::make('school_sizes')->label('ประเภทสถานศึกษา (ขนาด)')
                     ->toggleable(),
+                TextColumn::make('principal_name_thai')->label('ผู้อำนวยการ')
+                    ->formatStateUsing(function ($record) {
+                        // ตรวจสอบว่ามีค่าก่อนนำมาใช้
+                        $prefix = $record->principal_prefix_code ?? '';
+                        $name = $record->principal_name_thai ?? '';
+                        $middleName = $record->principal_middle_name_thai
+                            ? ' ' . $record->principal_middle_name_thai
+                            : '';
+                        $lastName = $record->principal_lastname_thai ?? '';
+
+                        // รวมชื่อเฉพาะเมื่อมีข้อมูล
+                        $fullName = trim("{$prefix}{$name} {$middleName} {$lastName}");
+
+                        // คืนค่าว่างหากไม่มีข้อมูล
+                        return $fullName ?: '-';
+                    })
+                    ->toggleable(),
+                TextColumn::make('deputy_principal_name_thai')->label('รองผู้อำนวยการ')
+                    ->formatStateUsing(function ($record) {
+                        // ตรวจสอบว่ามีค่าก่อนนำมาใช้
+                        $prefix = $record->deputy_principal_prefix_code ?? '';
+                        $name = $record->deputy_principal_name_thai ?? '';
+                        $middleName = $record->deputy_principal_middle_name_thai
+                            ? ' ' . $record->deputy_principal_middle_name_thai
+                            : '';
+                        $lastName = $record->deputy_principal_lastname_thai ?? '';
+
+                        // รวมชื่อเฉพาะเมื่อมีข้อมูล
+                        $fullName = trim("{$prefix}{$name} {$middleName} {$lastName}");
+
+                        // คืนค่าว่างหากไม่มีข้อมูล
+                        return $fullName ?: '-';
+                    })
+                    ->toggleable()
+                    ->toggledHiddenByDefault(true),
+                TextColumn::make('student_amount')->label('จำนวนนักเรียน')
+                    ->alignCenter()
+                    ->toggleable()
+                    ->toggledHiddenByDefault(true),
+                TextColumn::make('disadvantaged_student_amount')->label('จำนวนนักเรียนด้อยโอกาส')
+                    ->alignCenter()
+                    ->toggleable()
+                    ->toggledHiddenByDefault(true),
+                TextColumn::make('teacher_amount')->label('จำนวนครู')
+                    ->alignCenter()
+                    ->toggleable()
+                    ->toggledHiddenByDefault(true),
                 TextColumn::make('school_course_type')->label('หลักสูตรที่ใช้')
                     ->badge()
                     ->toggleable(),
@@ -315,7 +581,7 @@ class SchoolResource extends Resource
                 Filter::make('my_school')
                     ->label('แสดงเฉพาะโรงเรียนของฉัน')
                     ->toggle()
-                    ->query(fn(Builder $query): Builder => $query->where('school_id', IlluminateFacade\Auth::user()->school_id)),
+                    ->query(fn(Builder $query): Builder => ($query->where('school_id', IlluminateFacade\Auth::user()->school_id))),
 
                 SelectFilter::make('school_sizes')
                     ->label('ขนาดสถานศึกษา')
@@ -355,75 +621,173 @@ class SchoolResource extends Resource
                 Tables\Actions\EditAction::make()
             ])
             ->headerActions([
-                Tables\Actions\ImportAction::make()
-                    ->importer(SchoolModelImporter::class)
+                Tables\Actions\Action::make('export')
+                    ->label('ดาวห์โหลดตาราง')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->form([
+                        FilamentComponent\TextInput::make('school_id')
+                            ->label('รหัสสถานศึกษา')
+                            ->placeholder('ทั้งหมด'),
+                        FilamentComponent\TextInput::make('school_name')
+                            ->label('ชื่อสถานศึกษา')
+                            ->placeholder('ทั้งหมด'),
+                        FilamentComponent\Select::make('province')
+                            ->label('จังหวัด')
+                            ->options($provinces)
+                            ->searchable()
+                            ->placeholder('ทั้งหมด'),
+                        FilamentComponent\Select::make('district')
+                            ->label('อำเภอ')
+                            ->options(
+                                collect($districts)
+                                    ->flatMap(fn($items) => $items)
+                                    ->unique()
+                                    ->mapWithKeys(fn($item) => [$item => $item])
+                                    ->toArray()
+                            )
+                            ->searchable()
+                            ->placeholder('ทั้งหมด'),
+                        FilamentComponent\Select::make('ministry')
+                            ->label('สังกัดกระทรวง')
+                            ->options(SchoolModel::query()->whereNotNull('ministry')->pluck('ministry', 'ministry')->toArray())
+                            ->searchable()
+                            ->placeholder('ทั้งหมด'),
+                        FilamentComponent\Select::make('school_sizes')
+                            ->label('ขนาดสถานศึกษา')
+                            ->options([
+                                'ขนาดใหญ่' => 'ขนาดใหญ่',
+                                'ขนาดกลาง' => 'ขนาดกลาง',
+                                'ขนาดเล็ก' => 'ขนาดเล็ก',
+                            ])
+                            ->placeholder('ทั้งหมด'),
+                    ])
+                    ->action(function (array $data) {
+                        return Excel::download(
+                            new \Modules\Dashboard\Exports\SchoolExport($data),
+                            'yalapeo_' . now()->format('Y-m-d') . '_schools' . '.xlsx'
+                        );
+                    })
+                    ->visible(fn() =>
+                        IlluminateFacade\Auth::user()->role === UserRole::SUPERADMIN
+                        || IlluminateFacade\Auth::user()->role === UserRole::SCHOOLADMIN
+                        || IlluminateFacade\Auth::user()->role === UserRole::OFFICER),
+
+                Tables\Actions\Action::make('import')
                     ->label('Import')
-                    ->visible(fn() => IlluminateFacade\Auth::user()->isSuperAdmin())
-                    ->icon('heroicon-s-inbox-arrow-down'),
-                ExportAction::make()->exports([
-                    ExcelExport::make()->queue()
-                ])
+                    ->icon('heroicon-o-arrow-left-end-on-rectangle')
+                    ->form([
+                        FilamentComponent\Section::make()
+                            ->schema([
+                                FilamentComponent\Placeholder::make('template_info')
+                                    ->content(new HtmlString('
+                    <div class="flex justify-start">
+                        <a href="' . route('school.download-template') . '" class="filament-button filament-button-size-md inline-flex items-center justify-center py-1 gap-1 font-medium rounded-lg border transition-colors focus:outline-none focus:ring-offset-2 focus:ring-2 focus:ring-inset dark:focus:ring-offset-0 min-h-[2rem] px-3 text-sm text-white shadow focus:ring-white border-transparent bg-primary-600 hover:bg-primary-500 focus:bg-primary-700 focus:ring-offset-primary-700" target="_blank">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span>ดาวน์โหลดแม่แบบ</span>
+                        </a>
+                    </div>
+                    <div class="mt-2">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">ดาวน์โหลดแม่แบบไฟล์ Excel สำหรับใช้นำเข้าข้อมูลโรงเรียน</p>
+                    </div>
+                ')),
+                            ])
+                            ->columnSpanFull(),
+                        FilamentComponent\FileUpload::make('file')
+                            ->label('ไฟล์ Excel')
+                            ->acceptedFileTypes(['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])
+                            ->helperText('รองรับเฉพาะไฟล์ .xlsx และ .xls เท่านั้น')
+                            ->required(),
+                    ])
+                    ->action(function (array $data) {
+                        try {
+                            // เพิ่มการล็อก
+                            Log::info('Starting import process');
+
+                            // ตรวจสอบว่าได้รับไฟล์หรือไม่
+                            if (!isset($data['file']) || empty($data['file'])) {
+                                Log::error('No file received for import');
+                                Notification::make()
+                                    ->title('ไม่พบไฟล์')
+                                    ->body('ไม่สามารถอ่านไฟล์ที่อัปโหลดได้')
+                                    ->danger()
+                                    ->send();
+                                return;
+                            }
+
+                            $import = new \Modules\Dashboard\Imports\SchoolImport();
+                            Excel::import($import, $data['file']);
+
+                            Log::info('Import completed', ['rows' => $import->getRowCount()]);
+
+                            // แสดงข้อมูลสรุป
+                            $importCount = $import->getRowCount();
+
+                            if ($importCount > 0) {
+                                Notification::make()
+                                    ->title('นำเข้าข้อมูลสำเร็จ')
+                                    ->body('นำเข้าข้อมูลจำนวน ' . $importCount . ' รายการสำเร็จ')
+                                    ->success()
+                                    ->send();
+                            } else {
+                                // แสดงข้อผิดพลาด (ถ้ามี)
+                                $errors = $import->getErrors();
+
+                                if (!empty($errors)) {
+                                    Log::warning('Import errors:', $errors);
+                                    Notification::make()
+                                        ->title('นำเข้าข้อมูลไม่สำเร็จ')
+                                        ->body('พบข้อผิดพลาด: ' . implode(', ', array_slice($errors, 0, 3)) .
+                                            (count($errors) > 3 ? ' และอื่นๆ อีก ' . (count($errors) - 3) . ' รายการ' : ''))
+                                        ->danger()
+                                        ->send();
+                                } else {
+                                    Notification::make()
+                                        ->title('ไม่พบข้อมูลที่สามารถนำเข้าได้')
+                                        ->body('กรุณาตรวจสอบไฟล์แม่แบบและข้อมูลที่ต้องการนำเข้า โดยเฉพาะชื่อคอลัมน์ในแถวแรก')
+                                        ->warning()
+                                        ->send();
+                                }
+                            }
+                        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+                            Log::error('Excel validation exception:', [
+                                'message' => $e->getMessage(),
+                                'failures' => $e->failures()
+                            ]);
+
+                            $failures = $e->failures();
+                            $errorMessages = [];
+
+                            foreach ($failures as $failure) {
+                                $errorMessages[] = 'แถวที่ ' . $failure->row() . ': ' . implode(', ', $failure->errors());
+                            }
+
+                            Notification::make()
+                                ->title('ข้อมูลไม่ถูกต้อง')
+                                ->body(implode('<br>', array_slice($errorMessages, 0, 3)) .
+                                    (count($errorMessages) > 3 ? '<br>และอื่นๆ อีก ' . (count($errorMessages) - 3) . ' รายการ' : ''))
+                                ->danger()
+                                ->send();
+                        } catch (\Exception $e) {
+                            Log::error('Import exception:', [
+                                'message' => $e->getMessage(),
+                                'trace' => $e->getTraceAsString()
+                            ]);
+
+                            Notification::make()
+                                ->title('เกิดข้อผิดพลาด')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    })
+                    ->visible(fn() =>
+                        IlluminateFacade\Auth::user()->role === UserRole::SUPERADMIN),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
-                ]),
-                TablesExportBulkAction::make()->exports([
-                    ExcelExport::make()->fromModel()->except([
-                        'student_amount',
-                        'disadventaged_student_amount',
-                        'teacher_amount',
-                        'course_attachment',
-                        'created_at',
-                        'updated_at',
-                    ]),
-                    ExcelExport::make()->fromModel()->only([
-                        'school_id',
-                        'school_name_th',
-                        'school_name_en',
-                        'ministry',
-                        'department',
-                        'area',
-                        'school_sizes',
-                        'founding_date',
-                        'school_course_type',
-                        'house_id',
-                        'village_no',
-                        'road',
-                        'province',
-                        'district',
-                        'sub_district',
-                        'postal_code',
-                        'phone',
-                        'fax',
-                        'email',
-                        'website',
-                        'latitude',
-                        'longitude',
-                    ])->withColumns([
-                                Column::make('school_id')->heading('รหัสสถานศึกษา'),
-                                Column::make('school_name_th')->heading('ชื่อสถานศึกษา (ไทย)'),
-                                Column::make('school_name_en')->heading('ชื่อสถานศึกษา (อังกฤษ)'),
-                                Column::make('ministry')->heading('สังกัดกระทรวง'),
-                                Column::make('department')->heading('สังกัดสำนักงาน/กรม'),
-                                Column::make('area')->heading('เขตพื้นที่การศึกษา'),
-                                Column::make('school_sizes')->heading('ประเภทสถานศึกษา (ขนาด)'),
-                                Column::make('founding_date')->heading('วันเดือนปีที่ก่อตั้ง'),
-                                Column::make('house_id')->heading('เลขที่ ที่อยู่'),
-                                Column::make('village_no')->heading('หมู่ที่'),
-                                Column::make('road')->heading('ถนน'),
-                                Column::make('sub_district')->heading('ตำบล'),
-                                Column::make('district')->heading('อำเภอ'),
-                                Column::make('province')->heading('จังหวัด'),
-                                Column::make('postal_code')->heading('รหัสไปรษณีย์'),
-                                Column::make('phone')->heading('โทรศัพท์'),
-                                Column::make('fax')->heading('โทรสาร'),
-                                Column::make('email')->heading('อีเมล์'),
-                                Column::make('website')->heading('เว็บไซต์'),
-                                Column::make('latitude')->heading('ละติจูด'),
-                                Column::make('longitude')->heading('ลองจิจูด'),
-                                Column::make('school_course_type')->heading('หลักสูตรที่ใช้'),
-                            ])
                 ]),
 
             ]);
@@ -452,5 +816,17 @@ class SchoolResource extends Resource
             'create' => Pages\CreateSchool::route('/create'),
             'edit' => Pages\EditSchool::route('/{record}/edit'),
         ];
+    }
+
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        // ถ้าเป็น SchoolAdmin ให้แสดงเฉพาะข้อมูลของโรงเรียนตนเอง
+        if (IlluminateFacade\Auth::user()->role === UserRole::SCHOOLADMIN) {
+            $query->where('school_id', IlluminateFacade\Auth::user()->school_id);
+        }
+
+        return $query;
     }
 }

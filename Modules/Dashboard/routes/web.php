@@ -1,7 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Maatwebsite\Excel\Facades\Excel;
 use Modules\Dashboard\Http\Controllers\ModuleDashboardController;
+use Modules\Dashboard\Http\Controllers\SchoolExportImportController;
+use Modules\Dashboard\Http\Controllers\StudentNumberExportImportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,4 +22,9 @@ Route::group([], function () {
     Route::get('/dashboard', [ModuleDashboardController::class, 'index']);
 });
 
-
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('student-numbers/download-template', [StudentNumberExportImportController::class, 'downloadTemplate'])
+        ->name('student-numbers.download-template');
+    Route::get('school/download-template', [SchoolExportImportController::class, 'downloadTemplate'])
+        ->name('school.download-template');
+});

@@ -30,6 +30,11 @@
     </script>
     <script src="https://kit.fontawesome.com/9cfa50ee02.js" crossorigin="anonymous"></script>
 
+    @vite([
+        'Modules/SandBox/Resources/assets/js/infinite-scroll.js',
+        'Modules/SandBox/Resources/assets/css/style.css',
+    ])
+
 </head>
 
 <body>

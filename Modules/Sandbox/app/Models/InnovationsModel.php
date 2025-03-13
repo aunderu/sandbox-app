@@ -15,6 +15,9 @@ class InnovationsModel extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
+        'innovationID',
+        'education_year',
+        'semester',
         'school_id',
         'inno_type_id',
         'inno_name',
@@ -27,6 +30,9 @@ class InnovationsModel extends Model
     ];
 
     protected $table = 'innovations';
+    protected $primaryKey = 'innovationID';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $casts = [
         'tags' => 'array',
