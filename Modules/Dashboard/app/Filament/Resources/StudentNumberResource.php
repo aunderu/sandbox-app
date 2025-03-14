@@ -188,8 +188,11 @@ class StudentNumberResource extends Resource
                         return "ปีการศึกษา: {$data['value']}";
                     }),
             ])
-            ->filtersFormColumns(3) // จัด layout ให้เป็น 3 คอลัมน์
-            ->persistFiltersInSession() // เพิ่มบรรทัดนี้เพื่อเก็บค่า filter ใน session
+            ->filtersFormColumns(3) 
+            ->persistFiltersInSession()
+            ->paginated([10, 25, 50, 100])
+            ->defaultPaginationPageOption(10)
+            ->paginationPageOptions([10, 25, 50, 100])
             ->actions([
                 Tables\Actions\EditAction::make()
                     ->visible(fn() => Auth::user()->role === UserRole::SUPERADMIN || Auth::user()->role === UserRole::SCHOOLADMIN),
