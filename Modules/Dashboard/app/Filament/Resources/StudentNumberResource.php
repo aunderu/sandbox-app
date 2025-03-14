@@ -152,34 +152,39 @@ class StudentNumberResource extends Resource
                         if (!$data['value']) {
                             return null;
                         }
-                        
+
                         $school = SchoolModel::where('school_id', $data['value'])->first();
                         return $school ? "โรงเรียน: {$school->school_name_th}" : null;
                     }),
 
                 Tables\Filters\SelectFilter::make('grade_id')
                     ->label('ระดับชั้น')
+                    ->multiple() // เปลี่ยนเป็นแบบเลือกได้หลายค่า
                     ->options(GradeLevelsModel::pluck('grade_name', 'id'))
                     ->searchable()
                     ->preload()
                     ->indicateUsing(function (array $data): ?string {
-                        if (!$data['value']) {
+                        if (empty($data['values']) || $data['values'] === []) {
                             return null;
                         }
-                        
-                        $grade = GradeLevelsModel::find($data['value']);
-                        return $grade ? "ระดับชั้น: {$grade->grade_name}" : null;
+
+                        if (count($data['values']) === 1) {
+                            $grade = GradeLevelsModel::find($data['values'][0]);
+                            return $grade ? "ระดับชั้น: {$grade->grade_name}" : null;
+                        }
+
+                        return "ระดับชั้น: " . count($data['values']) . " รายการ";
                     }),
 
                 Tables\Filters\SelectFilter::make('education_year')
                     ->label('ปีการศึกษา')
                     ->options(fn() => static::getEducationYears())
-                    ->default(date('Y') + 543)
+                    // ->default(date('Y') + 543)
                     ->indicateUsing(function (array $data): ?string {
                         if (!$data['value']) {
                             return null;
                         }
-                        
+
                         return "ปีการศึกษา: {$data['value']}";
                     }),
             ])

@@ -14,14 +14,14 @@ return new class extends Migration
         Schema::create('student_number', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('school_id');
-            $table->unsignedBigInteger('year_id');
+            $table->unsignedBigInteger('grade_id');
             $table->integer('male_count')->nullable();
             $table->integer('female_count')->nullable();
             $table->timestamps();
 
             // Set up foreign key constraint
             // $table->foreign('school_id')->references('school_id')->on('school_models')->onDelete('cascade');
-            // $table->foreign('year_id')->references('year_id')->on('academic_year');
+            // $table->foreign('grade_id')->references('grade_id')->on('academic_year');
         });
     }
 

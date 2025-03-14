@@ -90,14 +90,14 @@ class StudentNumbersImport implements
 
             // ตรวจสอบว่ามีข้อมูลซ้ำหรือไม่
             $exists = StudentNumberModel::where('school_id', $schoolId)
-                ->where('year_id', $yearId)
+                ->where('grade_id', $yearId)
                 ->where('education_year', $educationYear)
                 ->exists();
 
             if ($exists) {
                 // อัปเดตข้อมูลเดิม
                 $record = StudentNumberModel::where('school_id', $schoolId)
-                    ->where('year_id', $yearId)
+                    ->where('grade_id', $yearId)
                     ->where('education_year', $educationYear)
                     ->first();
 
@@ -108,7 +108,7 @@ class StudentNumbersImport implements
                 Log::info('Updated existing student number record', [
                     'id' => $record->id,
                     'school_id' => $schoolId,
-                    'year_id' => $yearId,
+                    'grade_id' => $yearId,
                     'education_year' => $educationYear
                 ]);
 
@@ -118,7 +118,7 @@ class StudentNumbersImport implements
             // สร้างข้อมูลใหม่
             Log::info('Creating new student number record', [
                 'school_id' => $schoolId,
-                'year_id' => $yearId,
+                'grade_id' => $yearId,
                 'education_year' => $educationYear,
                 'male_count' => $maleCount,
                 'female_count' => $femaleCount
@@ -126,7 +126,7 @@ class StudentNumbersImport implements
 
             return new StudentNumberModel([
                 'school_id' => $schoolId,
-                'year_id' => $yearId,
+                'grade_id' => $yearId,
                 'education_year' => $educationYear,
                 'male_count' => $maleCount,
                 'female_count' => $femaleCount,

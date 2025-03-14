@@ -23,7 +23,7 @@ class StudentNumberExportImportController extends Controller
     {
         $filters = [
             'school_id' => $request->input('school_id'),
-            'year_id' => $request->input('year_id'),
+            'grade_id' => $request->input('grade_id'),
             'education_year' => $request->input('education_year'),
         ];
         

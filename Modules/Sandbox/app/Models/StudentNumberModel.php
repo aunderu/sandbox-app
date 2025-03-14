@@ -15,7 +15,7 @@ class StudentNumberModel extends Model
      */
     protected $fillable = [
         'school_id',
-        'year_id',
+        'grade_id',
         'education_year',
         'male_count',
         'female_count',
@@ -30,6 +30,6 @@ class StudentNumberModel extends Model
 
     public function grade()
     {
-        return $this->belongsTo(GradeLevelsModel::class, 'year_id', 'id');
+        return $this->belongsTo(GradeLevelsModel::class, 'grade_id', 'id');
     }
 }

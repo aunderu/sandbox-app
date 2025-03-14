@@ -29,73 +29,6 @@ class StudentNumbersExport implements FromCollection, WithHeadings, WithStyles, 
         $this->filters = $filters;
     }
 
-    // public function collection()
-    // {
-    //     // ดึงข้อมูลโรงเรียน
-    //     $schoolsQuery = SchoolModel::query();
-
-    //     // กรองตามบทบาทผู้ใช้
-    //     if (Auth::user()->role === UserRole::SCHOOLADMIN) {
-    //         $schoolsQuery->where('school_id', Auth::user()->school_id);
-    //     }
-
-    //     // กรองตามเงื่อนไขที่ส่งมาถ้ามี
-    //     if (isset($this->filters['school_id']) && !empty($this->filters['school_id'])) {
-    //         $schoolsQuery->where('school_id', $this->filters['school_id']);
-    //     }
-
-    //     $schools = $schoolsQuery->get();
-
-    //     // ดึงข้อมูลระดับชั้นทั้งหมดที่มีการใช้งาน
-    //     $grades = GradeLevelsModel::orderBy('id')->get();
-
-    //     // ดึงข้อมูลจำนวนนักเรียนโดยตรงจาก DB พร้อมเงื่อนไขเพิ่มเติม
-    //     $studentNumbersRaw = DB::table('student_number')
-    //         ->select('*')
-    //         ->when(isset($this->filters['year_id']) && !empty($this->filters['year_id']), function ($query) {
-    //             return $query->where('year_id', $this->filters['year_id']);
-    //         })
-    //         ->when(isset($this->filters['education_year']) && !empty($this->filters['education_year']), function ($query) {
-    //             return $query->where('education_year', $this->filters['education_year']);
-    //         })
-    //         ->get();
-
-    //     // จัดรูปแบบข้อมูลใหม่เป็นแนวตั้ง
-    //     $result = new Collection();
-
-    //     foreach ($schools as $school) {
-    //         $schoolCode = $school->school_id;
-    //         $schoolName = $school->school_name_th;
-
-    //         $row = [
-    //             $schoolCode,
-    //             $schoolName,
-    //         ];
-
-    //         // สร้างข้อมูลจำนวนนักเรียนตามระดับชั้น
-    //         foreach ($grades as $grade) {
-    //             $studentNumber = null;
-
-    //             // ค้นหาข้อมูลจำนวนนักเรียน - ใช้วิธีเดียวกันสำหรับทุกโรงเรียน
-    //             foreach ($studentNumbersRaw as $record) {
-    //                 if ($record->school_id == $schoolCode && $record->year_id == $grade->id) {
-    //                     $studentNumber = $record;
-    //                     break;
-    //                 }
-    //             }
-
-    //             // เพิ่มข้อมูลลงในแถว
-    //             $row[] = $studentNumber ? $studentNumber->male_count : 0;    // ชาย
-    //             $row[] = $studentNumber ? $studentNumber->female_count : 0;  // หญิง
-    //         }
-
-    //         $result->push((object) $row);
-    //         $this->rowsExported++;
-    //     }
-
-    //     return $result;
-    // }
-
     public function collection()
     {
         // ดึงข้อมูลโรงเรียน
@@ -122,8 +55,8 @@ class StudentNumbersExport implements FromCollection, WithHeadings, WithStyles, 
         // ดึงข้อมูลจำนวนนักเรียนโดยตรงจาก DB เพื่อป้องกันปัญหา relationship
         $studentNumbersRaw = DB::table('student_number')
             ->select('*')
-            ->when(isset($this->filters['year_id']) && !empty($this->filters['year_id']), function ($query) {
-                return $query->where('year_id', $this->filters['year_id']);
+            ->when(isset($this->filters['grade_id']) && !empty($this->filters['grade_id']), function ($query) {
+                return $query->where('grade_id', $this->filters['grade_id']);
             })
             ->when(isset($this->filters['education_year']) && !empty($this->filters['education_year']), function ($query) {
                 return $query->where('education_year', $this->filters['education_year']);
@@ -165,7 +98,7 @@ class StudentNumbersExport implements FromCollection, WithHeadings, WithStyles, 
                     // ถ้าเชื่อมโยงด้วยชื่อระดับชั้นแทน ID
                     if (
                         ($record->school_id == $schoolId || $record->school_id == $school->school_id) &&
-                        $record->year_id == $grade->id
+                        $record->grade_id == $grade->id
                     ) {
                         $studentNumber = $record;
                         break;

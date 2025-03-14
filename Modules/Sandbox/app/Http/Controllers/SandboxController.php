@@ -29,7 +29,7 @@ class SandboxController extends Controller
         $onet_national_avg = Models\OnetNationalAvgModel::all();
         $onet_province_avg = Models\OnetProvinceAvgModel::all();
 
-        $student_sum_data = DB::table('student_number')->join('grade_levels', 'student_number.year_id', '=', 'grade_levels.id')->select('student_number.year_id', 'grade_levels.grade_name', DB::raw('SUM(student_number.male_count) as total_male_count'), DB::raw('SUM(student_number.female_count) as total_female_count'))->groupBy('student_number.year_id', 'grade_levels.grade_name')->get();
+        $student_sum_data = DB::table('student_number')->join('grade_levels', 'student_number.grade_id', '=', 'grade_levels.id')->select('student_number.grade_id', 'grade_levels.grade_name', DB::raw('SUM(student_number.male_count) as total_male_count'), DB::raw('SUM(student_number.female_count) as total_female_count'))->groupBy('student_number.grade_id', 'grade_levels.grade_name')->get();
 
         $locations = DB::table('school_data')->select('school_name_th', 'latitude', 'longitude')->get();
 

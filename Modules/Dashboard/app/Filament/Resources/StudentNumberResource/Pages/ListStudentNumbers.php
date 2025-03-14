@@ -3,10 +3,10 @@
 namespace Modules\Dashboard\Filament\Resources\StudentNumberResource\Pages;
 
 use App\Enums\UserRole;
+use Modules\Dashboard\Filament\Resources\StudentNumberResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\Auth;
-use Modules\Dashboard\Filament\Resources\StudentNumberResource;
 use Modules\Dashboard\Filament\Resources\StudentNumberResource\Widgets\StudentNumberStats;
 
 class ListStudentNumbers extends ListRecords
@@ -28,26 +28,64 @@ class ListStudentNumbers extends ListRecords
         ];
     }
 
-    // รีเฟรช widget เมื่อมีการกรอง - อัปเดตวิธีการส่ง event
-    public function filterTable(): void
+    /**
+     * จับเหตุการณ์เมื่อมีการอัพเดตตัวกรอง
+     */
+    public function updatedTableFilters(): void
     {
-        parent::filterTable();
-        
-        // ส่ง event ไปยัง widget เมื่อมีการกรอง
-        $this->dispatch('table-filter');
+        $this->updateWidgetStats();
     }
-    
-    // เพิ่ม hook นี้เพื่อให้แน่ใจว่าจะเรียกใช้ทุกครั้งที่มีการกรอง
-    protected function afterFiltering(): void
+
+    /**
+     * จับเหตุการณ์เมื่อมีการค้นหา
+     */
+    public function updatedTableSearch(): void
     {
-        // ส่ง event ไปยัง widget เมื่อมีการกรอง
-        $this->dispatch('table-filter');
+        $this->updateWidgetStats();
     }
-    
-    // เพิ่ม hook นี้เพื่อให้มั่นใจว่า Widget จะได้รับการอัปเดตเมื่อยกเลิกการกรอง
-    protected function afterFilteringIsReset(): void
+
+    /**
+     * เมื่อรีเซ็ตตัวกรอง
+     */
+    public function resetTableFiltersForm(): void
     {
-        // ส่ง event ไปยัง widget เมื่อมีการยกเลิกการกรอง
-        $this->dispatch('table-filter');
+        parent::resetTableFiltersForm();
+        $this->updateWidgetStats();
+    }
+
+    /**
+     * ส่ง event เมื่อมีการลบ filter ผ่านปุ่ม X
+     */
+    public function removeTableFilter(string $filterName, ?string $field = null, bool $isRemovingAllFilters = false): void
+    {
+        parent::removeTableFilter($filterName, $field, $isRemovingAllFilters);
+        $this->updateWidgetStats();
+    }
+
+    /**
+     * รีเซ็ตการค้นหา
+     */
+    public function resetTableSearch(): void
+    {
+        parent::resetTableSearch();
+        $this->updateWidgetStats();
+    }
+
+    /**
+     * ส่งข้อมูลปัจจุบันไปยัง widget stats
+     */
+    private function updateWidgetStats(): void
+    {
+        // สร้าง array สำหรับเก็บข้อมูลที่จะส่งไปยัง widget
+        $data = [
+            'filters' => $this->getTableFiltersForm()->getRawState(),
+            'search' => $this->getTableSearch(),
+        ];
+
+        // ส่ง event พร้อมข้อมูลไปยัง widget
+        $this->dispatch('studentNumberFiltersUpdated', filters: $data);
+
+        // Log ข้อมูลเพื่อตรวจสอบ
+        // \Log::debug('Updated widget stats', $data);
     }
 }
