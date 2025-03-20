@@ -188,7 +188,7 @@ class StudentNumberResource extends Resource
                         return "ปีการศึกษา: {$data['value']}";
                     }),
             ])
-            ->filtersFormColumns(3) 
+            ->filtersFormColumns(3)
             ->persistFiltersInSession()
             ->paginated([10, 25, 50, 100])
             ->defaultPaginationPageOption(10)
@@ -232,7 +232,6 @@ class StudentNumberResource extends Resource
                             $data['school_id'] = Auth::user()->school_id;
                         }
 
-                        // เรียกใช้ Excel::download โดยตรงแทนการ redirect ไปยัง route
                         return Excel::download(
                             new \Modules\Dashboard\Exports\StudentNumbersExport($data),
                             'student_numbers_' . now()->format('Y-m-d') . '.xlsx'
@@ -247,18 +246,18 @@ class StudentNumberResource extends Resource
                             ->schema([
                                 Components\Placeholder::make('template_info')
                                     ->content(new HtmlString('
-                    <div class="flex justify-start">
-                        <a href="' . route('student-numbers.download-template') . '" class="filament-button filament-button-size-md inline-flex items-center justify-center py-1 gap-1 font-medium rounded-lg border transition-colors focus:outline-none focus:ring-offset-2 focus:ring-2 focus:ring-inset dark:focus:ring-offset-0 min-h-[2rem] px-3 text-sm text-white shadow focus:ring-white border-transparent bg-primary-600 hover:bg-primary-500 focus:bg-primary-700 focus:ring-offset-primary-700" target="_blank">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <span>ดาวน์โหลดแม่แบบ</span>
-                        </a>
-                    </div>
-                    <div class="mt-2">
-                        <p class="text-sm text-gray-500 dark:text-gray-400">ดาวน์โหลดแม่แบบไฟล์ Excel สำหรับใช้นำเข้าข้อมูลจำนวนนักเรียน</p>
-                    </div>
-                ')),
+                                    <div class="flex justify-start">
+                                        <a href="' . route('student-numbers.download-template') . '" class="filament-button filament-button-size-md inline-flex items-center justify-center py-1 gap-1 font-medium rounded-lg border transition-colors focus:outline-none focus:ring-offset-2 focus:ring-2 focus:ring-inset dark:focus:ring-offset-0 min-h-[2rem] px-3 text-sm text-white shadow focus:ring-white border-transparent bg-primary-600 hover:bg-primary-500 focus:bg-primary-700 focus:ring-offset-primary-700" target="_blank">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            <span>ดาวน์โหลดแม่แบบ</span>
+                                        </a>
+                                    </div>
+                                    <div class="mt-2">
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">ดาวน์โหลดแม่แบบไฟล์ Excel สำหรับใช้นำเข้าข้อมูลจำนวนนักเรียน (จำเป็น)</p>
+                                    </div>
+                                ')),
                             ])
                             ->columnSpanFull(),
                         Components\FileUpload::make('file')

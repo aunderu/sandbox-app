@@ -39,7 +39,7 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
-            ->databaseNotifications()
+            // ->databaseNotifications()
             // ->profile()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
@@ -73,7 +73,7 @@ class AdminPanelProvider extends PanelProvider
                     ->sort(1)
                     ->openUrlInNewTab(true)
             ])
-            ->collapsibleNavigationGroups(false)
+            ->collapsibleNavigationGroups(true)
             ->plugins([
                 ModulesPlugin::make(),
                 BreezyCore::make()

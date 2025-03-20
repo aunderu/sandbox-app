@@ -5,6 +5,8 @@ namespace Modules\Dashboard\Filament\Resources;
 use App\Enums\UserRole;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components as FilamentComponent;
+use Filament\Infolists\Components as InfolistComponent;
+use Filament\Infolists\Infolist;
 use Illuminate\Support\Facades as IlluminateFacade;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -618,6 +620,7 @@ class SchoolResource extends Resource
                     ->options(SchoolModel::query()->whereNotNull('ministry')->pluck('ministry', 'ministry')->toArray()),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make()
             ])
             ->headerActions([
@@ -793,6 +796,281 @@ class SchoolResource extends Resource
             ]);
     }
 
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                InfolistComponent\Section::make('ข้อมูลพื้นฐาน')
+                    ->icon('heroicon-o-home')
+                    ->collapsible()
+                    ->description('ข้อมูลทั่วไปของสถานศึกษา')
+                    ->schema([
+                        InfolistComponent\Grid::make(2)
+                            ->schema([
+                                InfolistComponent\TextEntry::make('school_id')
+                                    ->label('รหัสสถานศึกษา')
+                                    ->weight(\Filament\Support\Enums\FontWeight::Bold)
+                                    ->color('primary')
+                                    ->copyable()
+                                    ->copyMessage('คัดลอกรหัสสถานศึกษาแล้ว')
+                                    ->icon('heroicon-m-identification'),
+                                InfolistComponent\TextEntry::make('school_name_th')
+                                    ->label('ชื่อสถานศึกษา (ไทย)')
+                                    ->weight(\Filament\Support\Enums\FontWeight::Bold)
+                                    ->formatStateUsing(fn($state) => 'โรงเรียน ' . $state)
+                                    ->color('success')
+                                    ->icon('heroicon-m-building-library'),
+                                InfolistComponent\TextEntry::make('school_name_en')
+                                    ->label('ชื่อสถานศึกษา (อังกฤษ)')
+                                    ->visible(fn($record) => !empty($record->school_name_en))
+                                    ->color('gray')
+                                    ->icon('heroicon-m-language'),
+                            ]),
+                        InfolistComponent\Grid::make(3)
+                            ->schema([
+                                InfolistComponent\TextEntry::make('ministry')
+                                    ->label('สังกัดกระทรวง')
+                                    ->icon('heroicon-m-building-office-2'),
+                                InfolistComponent\TextEntry::make('department')
+                                    ->label('สังกัดสำนักงาน/กรม')
+                                    ->icon('heroicon-m-building-office'),
+                                InfolistComponent\TextEntry::make('area')
+                                    ->label('เขตพื้นที่การศึกษา')
+                                    ->icon('heroicon-m-map'),
+                                InfolistComponent\TextEntry::make('school_sizes')
+                                    ->label('ขนาดสถานศึกษา')
+                                    ->badge()
+                                    ->color(fn($state) => match ($state) {
+                                        'เล็ก' => 'info',
+                                        'กลาง' => 'warning',
+                                        'ใหญ่' => 'success',
+                                        'ใหญ่พิเศษ' => 'danger',
+                                        default => 'gray',
+                                    })
+                                    ->icon('heroicon-m-building-office'),
+                                InfolistComponent\TextEntry::make('founding_date')
+                                    ->label('วันที่ก่อตั้ง')
+                                    ->date('d M Y')
+                                    ->icon('heroicon-m-calendar'),
+                            ]),
+                    ]),
+
+                InfolistComponent\Section::make('ข้อมูลบุคลากร')
+                    ->icon('heroicon-o-users')
+                    ->collapsible()
+                    ->description('ข้อมูลผู้บริหารสถานศึกษา')
+                    ->schema([
+                        InfolistComponent\Grid::make(2)
+                            ->schema([
+                                InfolistComponent\TextEntry::make('principal_name_thai')
+                                    ->label('ผู้อำนวยการสถานศึกษา')
+                                    ->formatStateUsing(function ($record) {
+                                        $prefix = $record->principal_prefix_code ?? '';
+                                        $name = $record->principal_name_thai ?? '';
+                                        $middleName = $record->principal_middle_name_thai
+                                            ? ' ' . $record->principal_middle_name_thai
+                                            : '';
+                                        $lastName = $record->principal_lastname_thai ?? '';
+                                        $fullName = trim("{$prefix}{$name}{$middleName} {$lastName}");
+                                        return $fullName ?: '-';
+                                    })
+                                    ->weight(\Filament\Support\Enums\FontWeight::Medium)
+                                    ->icon('heroicon-m-user')
+                                    ->default('-')
+                                    ->color('primary'),
+                                InfolistComponent\TextEntry::make('deputy_principal_name_thai')
+                                    ->label('รองผู้อำนวยการสถานศึกษา')
+                                    ->formatStateUsing(function ($record) {
+                                        $prefix = $record->deputy_principal_prefix_code ?? '';
+                                        $name = $record->deputy_principal_name_thai ?? '';
+                                        $middleName = $record->deputy_principal_middle_name_thai
+                                            ? ' ' . $record->deputy_principal_middle_name_thai
+                                            : '';
+                                        $lastName = $record->deputy_principal_lastname_thai ?? '';
+                                        $fullName = trim("{$prefix}{$name}{$middleName} {$lastName}");
+                                        return $fullName ?: '-';
+                                    })
+                                    ->weight(\Filament\Support\Enums\FontWeight::Medium)
+                                    ->icon('heroicon-m-user')
+                                    ->default('-')
+                                    ->color('info'),
+                            ]),
+                    ]),
+
+                InfolistComponent\Section::make('ข้อมูลที่อยู่')
+                    ->icon('heroicon-o-map-pin')
+                    ->collapsible()
+                    ->description('ที่ตั้งและช่องทางการติดต่อสถานศึกษา')
+                    ->schema([
+                        InfolistComponent\Section::make('ที่อยู่')
+                            ->compact()
+                            ->schema([
+                                InfolistComponent\Grid::make(3)
+                                    ->schema([
+                                        InfolistComponent\TextEntry::make('house_id')
+                                            ->label('เลขที่')
+                                            ->default('-'),
+                                        InfolistComponent\TextEntry::make('village_no')
+                                            ->label('หมู่ที่')
+                                            ->default('-'),
+                                        InfolistComponent\TextEntry::make('road')
+                                            ->label('ถนน')
+                                            ->default('-'),
+                                        InfolistComponent\TextEntry::make('sub_district')
+                                            ->label('ตำบล')
+                                            ->default('-'),
+                                        InfolistComponent\TextEntry::make('district')
+                                            ->label('อำเภอ')
+                                            ->default('-'),
+                                        InfolistComponent\TextEntry::make('province')
+                                            ->label('จังหวัด')
+                                            ->default('-'),
+                                        InfolistComponent\TextEntry::make('postal_code')
+                                            ->label('รหัสไปรษณีย์')
+                                            ->default('-'),
+                                    ]),
+                            ]),
+                        InfolistComponent\Grid::make(2)
+                            ->schema([
+                                InfolistComponent\TextEntry::make('phone')
+                                    ->label('โทรศัพท์')
+                                    ->icon('heroicon-m-phone')
+                                    ->url(fn($state) => $state ? "tel:{$state}" : null)
+                                    ->color('success')
+                                    ->default('-')
+                                    ->copyable()
+                                    ->copyMessage('คัดลอกเบอร์โทรศัพท์แล้ว'),
+                                InfolistComponent\TextEntry::make('fax')
+                                    ->label('โทรสาร')
+                                    ->icon('heroicon-m-phone')
+                                    ->color('gray')
+                                    ->default('-')
+                                    ->copyable()
+                                    ->copyMessage('คัดลอกเบอร์โทรสารแล้ว'),
+                                InfolistComponent\TextEntry::make('email')
+                                    ->label('อีเมล')
+                                    ->icon('heroicon-m-envelope')
+                                    ->color('primary')
+                                    ->url(fn($state) => $state ? "mailto:{$state}" : null)
+                                    ->openUrlInNewTab()
+                                    ->default('-')
+                                    ->copyable()
+                                    ->copyMessage('คัดลอกอีเมลแล้ว'),
+                                InfolistComponent\TextEntry::make('website')
+                                    ->label('เว็บไซต์')
+                                    ->icon('heroicon-m-globe-alt')
+                                    ->color('info')
+                                    ->url(fn($state) => $state)
+                                    ->openUrlInNewTab()
+                                    ->default('-')
+                                    ->copyable()
+                                    ->copyMessage('คัดลอกเว็บไซต์แล้ว'),
+                            ]),
+                        InfolistComponent\Grid::make(1)
+                            ->schema([
+                                InfolistComponent\TextEntry::make('location')
+                                    ->label('พิกัดตำแหน่งที่ตั้ง')
+                                    ->state(function ($record) {
+                                        if (!$record->latitude || !$record->longitude) {
+                                            return null;
+                                        }
+                                        return "https://www.google.com/maps?q={$record->latitude},{$record->longitude}";
+                                    })
+                                    ->visible(fn($state) => !empty($state))
+                                    ->formatStateUsing(fn($state, $record) => "ละติจูด: {$record->latitude}, ลองจิจูด: {$record->longitude}")
+                                    ->url(fn($state) => $state)
+                                    ->openUrlInNewTab()
+                                    ->icon('heroicon-m-map')
+                                    ->color('success')
+                                    ->extraAttributes([
+                                        'class' => 'border border-green-300 p-2 rounded-lg',
+                                    ])
+                                    ->hint('คลิกเพื่อดูแผนที่ Google Maps'),
+                            ]),
+                    ]),
+
+                InfolistComponent\Section::make('จำนวนนักเรียนและครู')
+                    ->icon('heroicon-o-academic-cap')
+                    ->collapsible()
+                    ->description('ข้อมูลจำนวนนักเรียนและบุคลากร')
+                    ->schema([
+                        InfolistComponent\Grid::make(4)
+                            ->schema([
+                                InfolistComponent\TextEntry::make('student_amount')
+                                    ->label('จำนวนนักเรียน')
+                                    ->formatStateUsing(fn($state) => number_format($state) . ' คน')
+                                    ->icon('heroicon-m-academic-cap')
+                                    ->color('success')
+                                    ->size('xl')
+                                    ->weight(\Filament\Support\Enums\FontWeight::Bold)
+                                    ->extraAttributes([
+                                        'class' => 'bg-green-50 p-3 rounded-lg border border-green-200',
+                                    ]),
+                                InfolistComponent\TextEntry::make('disadvantaged_student_amount')
+                                    ->label('นักเรียนด้อยโอกาส')
+                                    ->formatStateUsing(fn($state) => number_format($state) . ' คน')
+                                    ->icon('heroicon-m-academic-cap')
+                                    ->color('danger')
+                                    ->size('xl')
+                                    ->weight(\Filament\Support\Enums\FontWeight::Bold)
+                                    ->extraAttributes([
+                                        'class' => 'bg-amber-50 p-3 rounded-lg border border-amber-200',
+                                    ]),
+                                InfolistComponent\TextEntry::make('teacher_amount')
+                                    ->label('จำนวนครู')
+                                    ->formatStateUsing(fn($state) => number_format($state) . ' คน')
+                                    ->icon('heroicon-m-user-group')
+                                    ->color('primary')
+                                    ->size('xl')
+                                    ->weight(\Filament\Support\Enums\FontWeight::Bold)
+                                    ->extraAttributes([
+                                        'class' => 'bg-blue-50 p-3 rounded-lg border border-blue-200',
+                                    ]),
+                                InfolistComponent\TextEntry::make('ratio')
+                                    ->label('อัตราส่วนครู:นักเรียน')
+                                    ->state(function ($record) {
+                                        if (!$record->teacher_amount || !$record->student_amount)
+                                            return '-';
+                                        $ratio = round($record->student_amount / $record->teacher_amount, 1);
+                                        return "1:{$ratio}";
+                                    })
+                                    ->icon('heroicon-m-calculator')
+                                    ->color('info')
+                                    ->size('xl')
+                                    ->weight(\Filament\Support\Enums\FontWeight::Bold)
+                                    ->extraAttributes([
+                                        'class' => 'bg-cyan-50 p-3 rounded-lg border border-cyan-200',
+                                    ]),
+                            ]),
+                    ]),
+
+                InfolistComponent\Section::make('หลักสูตรการศึกษา')
+                    ->icon('heroicon-o-book-open')
+                    ->collapsible()
+                    ->description('ข้อมูลหลักสูตรที่ใช้ในการเรียนการสอน')
+                    ->schema([
+                        InfolistComponent\TextEntry::make('school_course_type')
+                            ->label('หลักสูตรที่ใช้')
+                            ->default('-')
+                            ->badge()
+                            ->color('primary')
+                            ->listWithLineBreaks(),
+                        InfolistComponent\TextEntry::make('course_attachment')
+                            ->label('เอกสารแนบหลักสูตร')
+                            ->formatStateUsing(fn($state, $record) => $record->original_filename ?? $state)
+                            ->color('primary')
+                            ->icon('heroicon-m-document')
+                            ->url(fn($state) => $state ? asset('storage/' . $state) : null)
+                            ->openUrlInNewTab()
+                            ->visible(fn($state) => !empty($state))
+                            ->badge()
+                            ->extraAttributes([
+                                'class' => 'font-medium',
+                            ]),
+                    ]),
+            ]);
+    }
+
     public function deleteCourseAttachment($record)
     {
         if ($record->course_attachment) {
@@ -814,6 +1092,7 @@ class SchoolResource extends Resource
         return [
             'index' => Pages\ListSchools::route('/'),
             'create' => Pages\CreateSchool::route('/create'),
+            'view' => Pages\ViewSchool::route('/{record}'),
             'edit' => Pages\EditSchool::route('/{record}/edit'),
         ];
     }
