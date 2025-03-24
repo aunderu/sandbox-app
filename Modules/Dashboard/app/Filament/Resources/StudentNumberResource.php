@@ -61,88 +61,196 @@ class StudentNumberResource extends Resource
     {
         return $form
             ->schema([
-                Components\Select::make('school_id')->label(__('สถานศึกษา'))
-                    ->disabled(fn() => Auth::user()->role === UserRole::SCHOOLADMIN)
-                    ->relationship('school', 'school_name_th')
-                    ->prefix('โรงเรียน')
-                    ->searchable()
-                    ->columnSpanFull()
-                    ->required()
-                    ->default(fn() => Auth::user()->school_id)
-                    ->searchPrompt('เพิ่มชื่อโรงเรียนเพื่อค้นหา...')
-                    ->helperText(new HtmlString('กรณีที่ไม่มีชื่อโรงเรียนของท่านแสดง กรุณาติดต่อ<i><strong>ผู้ดูแลระบบ</strong></i>')),
-                Components\Select::make('year_id')
-                    ->label(__('ระดับชั้น'))
-                    ->relationship('grade', 'grade_name')
-                    ->required()
-                    ->validationAttribute('ระดับชั้น')
-                    ->afterStateUpdated(function ($state, $set, $get) {
-                        // ตรวจสอบว่ามีข้อมูลซ้ำหรือไม่
-                        $schoolId = $get('school_id');
-                        $educationYear = $get('education_year');
+                // ส่วนที่ 1: ข้อมูลโรงเรียนและปีการศึกษา
+                Components\Section::make('ข้อมูลทั่วไป')
+                    ->description('กรอกข้อมูลพื้นฐาน')
+                    ->icon('heroicon-o-academic-cap')
+                    ->collapsible()
+                    ->columns(2)
+                    ->schema([
+                        Components\Select::make('school_id')
+                            ->label('สถานศึกษา')
+                            ->disabled(fn() => Auth::user()->role === UserRole::SCHOOLADMIN)
+                            ->relationship('school', 'school_name_th')
+                            ->prefix('โรงเรียน')
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->default(fn() => Auth::user()->school_id)
+                            ->searchPrompt('เพิ่มชื่อโรงเรียนเพื่อค้นหา...')
+                            ->helperText(fn() => Auth::user()->role === UserRole::SCHOOLADMIN ? 'จำกัดเฉพาะโรงเรียนของคุณเท่านั้น' : 'กรณีที่ไม่มีชื่อโรงเรียน กรุณาติดต่อผู้ดูแลระบบ')
+                            ->columnSpanFull(),
+                            
+                        Components\Select::make('grade_id')
+                            ->label('ระดับชั้น')
+                            ->relationship('grade', 'grade_name')
+                            ->required()
+                            ->validationAttribute('ระดับชั้น')
+                            ->preload()
+                            ->searchable()
+                            ->afterStateUpdated(function ($state, $set, $get) {
+                                // ตรวจสอบว่ามีข้อมูลซ้ำหรือไม่
+                                $schoolId = $get('school_id');
+                                $educationYear = $get('education_year');
 
-                        if (!$schoolId || !$educationYear || !$state) {
-                            return;
-                        }
+                                if (!$schoolId || !$educationYear || !$state) {
+                                    return;
+                                }
 
-                        $recordId = request()->route('record');
-                        $query = StudentNumberModel::query()
-                            ->where('school_id', $schoolId)
-                            ->where('year_id', $state)
-                            ->where('education_year', $educationYear);
+                                $recordId = request()->route('record');
+                                $query = StudentNumberModel::query()
+                                    ->where('school_id', $schoolId)
+                                    ->where('grade_id', $state)
+                                    ->where('education_year', $educationYear);
 
-                        if ($recordId) {
-                            $query->where('id', '!=', $recordId);
-                        }
+                                if ($recordId) {
+                                    $query->where('id', '!=', $recordId);
+                                }
 
-                        $exists = $query->exists();
+                                $exists = $query->exists();
 
-                        if ($exists) {
-                            $set('year_id', null);
-                            Notification::make()
-                                ->title('ระดับชั้นนี้มีข้อมูลอยู่แล้วในปีการศึกษานี้')
-                                ->danger()
-                                ->send();
-                        }
-                    }),
-                Components\TextInput::make('education_year')
-                    ->label('ปีการศึกษา')
-                    ->numeric()
-                    ->required(),
-                Components\TextInput::make('male_count')
-                    ->label('จำนวนนักเรียนชาย')
-                    ->numeric()
-                    ->required(),
-                Components\TextInput::make('female_count')
-                    ->label('จำนวนนักเรียนหญิง')
-                    ->numeric()
-                    ->required(),
+                                if ($exists) {
+                                    $set('grade_id', null);
+                                    Notification::make()
+                                        ->title('ระดับชั้นนี้มีข้อมูลอยู่แล้วในปีการศึกษานี้')
+                                        ->danger()
+                                        ->send();
+                                }
+                            }),
+                            
+                        Components\TextInput::make('education_year')
+                            ->label('ปีการศึกษา')
+                            ->numeric()
+                            ->required()
+                            ->default(fn() => date('Y') + 543) // ปีการศึกษาปัจจุบัน
+                            ->minValue(2500)
+                            ->maxValue(2600)
+                            ->prefix('พ.ศ.')
+                            ->step(1),
+                    ]),
+                    
+                // ส่วนที่ 2: ข้อมูลจำนวนนักเรียน
+                Components\Section::make('ข้อมูลจำนวนนักเรียน')
+                    ->description('กรอกจำนวนนักเรียนแยกตามเพศ')
+                    ->icon('heroicon-o-user-group')
+                    ->collapsible()
+                    ->schema([
+                        Components\Section::make()
+                            ->schema([
+                                Components\Grid::make(2)
+                                    ->schema([
+                                        Components\TextInput::make('male_count')
+                                            ->label('นักเรียนชาย')
+                                            ->numeric()
+                                            ->required()
+                                            ->default(0)
+                                            ->minValue(0)
+                                            ->step(1)
+                                            ->suffixIcon('heroicon-m-user')
+                                            ->suffixIconColor('info')
+                                            ->live(onBlur: true)
+                                            ->afterStateUpdated(fn($state, $set, $get) => 
+                                                $set('total_students', ($state ?? 0) + ($get('female_count') ?? 0)))
+                                            ->hint('จำนวนนักเรียนชายทั้งหมด'),
+                                            
+                                        Components\TextInput::make('female_count')
+                                            ->label('นักเรียนหญิง')
+                                            ->numeric()
+                                            ->required()
+                                            ->default(0)
+                                            ->minValue(0)
+                                            ->step(1)
+                                            ->suffixIcon('heroicon-m-user')
+                                            ->suffixIconColor('danger')
+                                            ->live(onBlur: true)
+                                            ->afterStateUpdated(fn($state, $set, $get) => 
+                                                $set('total_students', ($state ?? 0) + ($get('male_count') ?? 0)))
+                                            ->hint('จำนวนนักเรียนหญิงทั้งหมด'),
+                                    ]),
+                                    
+                                Components\Grid::make(1)
+                                    ->schema([
+                                        Components\Placeholder::make('total_students')
+                                            ->label('จำนวนนักเรียนทั้งหมด')
+                                            ->content(function ($get) {
+                                                $total = ($get('male_count') ?? 0) + ($get('female_count') ?? 0);
+                                                return number_format($total) . ' คน';
+                                            })
+                                            ->extraAttributes(['class' => 'text-start text-xl font-bold py-3']),
+                                    ]),
+                            ])
+                            ->columns(1)
+                            ->extraAttributes(['class' => 'border-t pt-3']),
+                    ]),
             ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('education_year', 'desc')
             ->columns([
-                Columns\TextColumn::make('education_year')->label('ปีการศึกษา')
+                Columns\TextColumn::make('education_year')
+                    ->label('ปีการศึกษา')
                     ->sortable()
-                    ->searchable(),
-                Columns\TextColumn::make('school.school_name_th')->label('โรงเรียน')
+                    ->searchable()
+                    ->badge()
+                    ->color('primary')
+                    ->alignCenter(),
+                    
+                Columns\TextColumn::make('school.school_name_th')
+                    ->label('โรงเรียน')
                     ->sortable()
-                    ->searchable(),
-                Columns\TextColumn::make('grade.grade_name')->label('ระดับชั้น')
+                    ->searchable()
+                    ->wrap()
+                    ->limit(30)
+                    ->tooltip(fn($record) => $record->school->school_name_th ?? ''),
+                    
+                Columns\TextColumn::make('grade.grade_name')
+                    ->label('ระดับชั้น')
                     ->sortable()
-                    ->searchable(),
-                Columns\TextColumn::make('male_count')->label('จำนวนนักเรียนชาย')
+                    ->searchable()
+                    ->alignCenter(),
+                    
+                // จัดกลุ่มข้อมูลนักเรียนให้ดูเป็นระเบียบ
+                Columns\TextColumn::make('male_count')
+                    ->label('นักเรียนชาย')
                     ->sortable()
                     ->alignCenter()
-                    ->searchable(),
-                Columns\TextColumn::make('female_count')->label('จำนวนนักเรียนหญิง')
+                    ->badge()
+                    ->color('info')
+                    ->formatStateUsing(fn ($state) => number_format($state) . ' คน'),
+                    
+                Columns\TextColumn::make('female_count')
+                    ->label('นักเรียนหญิง')
                     ->sortable()
                     ->alignCenter()
-                    ->searchable(),
+                    ->badge()
+                    ->color('danger')
+                    ->formatStateUsing(fn ($state) => number_format($state) . ' คน'),
+                    
+                // คอลัมน์จำนวนรวม (คำนวณอัตโนมัติ)
+                Columns\TextColumn::make('total_students')
+                    ->label('รวม')
+                    ->getStateUsing(fn ($record) => ($record->male_count ?? 0) + ($record->female_count ?? 0))
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderByRaw("(male_count + female_count) {$direction}");
+                    })
+                    ->alignCenter()
+                    ->weight('bold')
+                    ->badge()
+                    ->color('success')
+                    ->formatStateUsing(fn ($state) => number_format($state) . ' คน'),
+                 
+                    
+                Columns\TextColumn::make('created_at')
+                    ->label('สร้างเมื่อ')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                // คงฟิลเตอร์เดิมที่มีอยู่แล้ว
                 Tables\Filters\SelectFilter::make('school_id')
                     ->label('โรงเรียน')
                     ->options(SchoolModel::pluck('school_name_th', 'school_id'))
@@ -179,7 +287,6 @@ class StudentNumberResource extends Resource
                 Tables\Filters\SelectFilter::make('education_year')
                     ->label('ปีการศึกษา')
                     ->options(fn() => static::getEducationYears())
-                    // ->default(date('Y') + 543)
                     ->indicateUsing(function (array $data): ?string {
                         if (!$data['value']) {
                             return null;
@@ -194,7 +301,23 @@ class StudentNumberResource extends Resource
             ->defaultPaginationPageOption(10)
             ->paginationPageOptions([10, 25, 50, 100])
             ->actions([
+                Tables\Actions\ViewAction::make()
+                    ->icon('heroicon-o-eye')
+                    ->label('ดูรายละเอียด')
+                    ->tooltip('คลิกเพื่อดูรายละเอียด'),
+                    
                 Tables\Actions\EditAction::make()
+                    ->icon('heroicon-o-pencil')
+                    ->label('แก้ไข')
+                    ->color('warning')
+                    ->tooltip('คลิกเพื่อแก้ไข')
+                    ->visible(fn() => Auth::user()->role === UserRole::SUPERADMIN || Auth::user()->role === UserRole::SCHOOLADMIN),
+                    
+                Tables\Actions\DeleteAction::make()
+                    ->icon('heroicon-o-trash')
+                    ->label('ลบ') 
+                    ->color('danger')
+                    ->tooltip('คลิกเพื่อลบ')
                     ->visible(fn() => Auth::user()->role === UserRole::SUPERADMIN || Auth::user()->role === UserRole::SCHOOLADMIN),
             ])
             ->headerActions([
@@ -213,7 +336,7 @@ class StudentNumberResource extends Resource
                                 ->placeholder('ทั้งหมด');
                         }
 
-                        $formComponents[] = Components\Select::make('year_id')
+                        $formComponents[] = Components\Select::make('grade_id')
                             ->label('ระดับชั้น')
                             ->relationship('grade', 'grade_name')
                             ->searchable()

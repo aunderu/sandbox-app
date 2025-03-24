@@ -227,6 +227,7 @@ class BasicSubjectAssessmentResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 Columns\TextColumn::make('education_year')
                     ->label('ปีการศึกษา')
