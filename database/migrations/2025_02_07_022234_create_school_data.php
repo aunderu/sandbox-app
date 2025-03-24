@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('school_data', function (Blueprint $table) {
-            $table->id('school_id')->primary();
+            $table->id('school_id');
             $table->string('school_name_th');
             $table->string('school_name_en')->nullable();
             $table->string('ministry')->nullable();
@@ -20,7 +20,17 @@ return new class extends Migration
             $table->string('area')->nullable();
             $table->string('school_sizes')->nullable();
             $table->date('founding_date')->nullable();
-            $table->json('school_course_type')->nullable();
+            $table->text('school_course_type')->nullable();
+            $table->text('course_attachment')->nullable();
+            $table->string('original_filename')->nullable();
+            $table->enum('principal_prefix_code', ['นาย', 'นาง', 'นางสาว', ''])->nullable();
+            $table->string('principal_name_thai', 100);
+            $table->string('principal_middle_name_thai', 100)->nullable();
+            $table->string('principal_lastname_thai', 100);
+            $table->enum('deputy_principal_prefix_code', ['นาย', 'นาง', 'นางสาว', ''])->nullable();
+            $table->string('deputy_principal_name_thai', 100)->nullable();
+            $table->string('deputy_principal_middle_name_thai', 100)->nullable();
+            $table->string('deputy_principal_lastname_thai', 100)->nullable();
             $table->string('house_id')->nullable();
             $table->string('village_no')->nullable();
             $table->string('road')->nullable();
@@ -32,9 +42,9 @@ return new class extends Migration
             $table->string('postal_code')->nullable();
             $table->string('email')->nullable();
             $table->string('website')->nullable();
-            $table->integer('student_amount');
-            $table->integer('disadvantaged_student_amount');
-            $table->integer('teacher_amount');
+            $table->integer('student_amount')->default(0);
+            $table->integer('disadvantaged_student_amount')->default(0);
+            $table->integer('teacher_amount')->default(0);
             $table->string('latitude')->nullable();
             $table->string('longitude')->nullable();
             $table->timestamps();

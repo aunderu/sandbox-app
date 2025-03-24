@@ -11,21 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('onet_province_avg', function (Blueprint $table) {
+        Schema::create('nt_province_avg', function (Blueprint $table) {
             $table->unsignedBigInteger('school_year_id');
-            $table->unsignedBigInteger('year_id');
+            $table->unsignedBigInteger('grade_id');
             $table->decimal('math_avg', 5, 2)->nullable();
             $table->decimal('thai_avg', 5, 2)->nullable();
-            $table->decimal('english_avg', 5, 2)->nullable();
-            $table->decimal('science_avg', 5, 2)->nullable();
             $table->decimal('total_avg', 5, 2)->nullable();
             $table->timestamps();
 
-            $table->foreign('school_year_id')->references('id')->on('school_years')->onDelete('cascade');
-            $table->foreign('grade_id')->references('id')->on('grade_levels')->onDelete('cascade');
-
-            // ป้องกันข้อมูลซ้ำ (ปีการศึกษา + ระดับชั้น)
             $table->primary(['school_year_id', 'grade_id']);
+
+            $table->foreign('grade_id')
+                ->references('id')
+                ->on('grade_levels')
+                ->onDelete('cascade')
+                ->onUpdate('restrict');
         });
     }
 
@@ -34,6 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('onet_province_avg');
+        Schema::dropIfExists('nt_province_avg');
     }
 };

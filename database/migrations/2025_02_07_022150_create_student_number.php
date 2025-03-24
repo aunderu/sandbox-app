@@ -15,13 +15,22 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('school_id');
             $table->unsignedBigInteger('grade_id');
+            $table->integer('education_year')->nullable();
             $table->integer('male_count')->nullable();
             $table->integer('female_count')->nullable();
             $table->timestamps();
 
-            // Set up foreign key constraint
-            // $table->foreign('school_id')->references('school_id')->on('school_models')->onDelete('cascade');
-            // $table->foreign('grade_id')->references('grade_id')->on('academic_year');
+            $table->foreign('school_id')
+                ->references('school_id')
+                ->on('school_data')
+                ->onDelete('restrict')
+                ->onUpdate('restrict');
+
+            $table->foreign('grade_id')
+                ->references('id')
+                ->on('grade_levels')
+                ->onDelete('restrict')
+                ->onUpdate('restrict');
         });
     }
 
