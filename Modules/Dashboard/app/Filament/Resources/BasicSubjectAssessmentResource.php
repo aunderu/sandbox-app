@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use Filament\Forms\Components as Components;
 use Filament\Infolists\Components\TextEntry\TextEntrySize;
 use Filament\Tables\Columns as Columns;
+use Illuminate\Support\HtmlString;
 use Modules\Dashboard\Filament\Resources\BasicSubjectAssessmentResource\Pages;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -62,6 +63,7 @@ class BasicSubjectAssessmentResource extends Resource
                     ->relationship('school', 'school_name_th')
                     ->prefix('โรงเรียน')
                     ->searchable()
+                    ->preload()
                     ->required()
                     ->default(fn() => Auth::user()->school_id)
                     ->searchPrompt('เพิ่มชื่อโรงเรียนเพื่อค้นหา...')
@@ -80,7 +82,8 @@ class BasicSubjectAssessmentResource extends Resource
                                     ->send();
                             }
                         }
-                    }),
+                    })
+                    ->helperText(new HtmlString('กรณีที่ไม่มีชื่อโรงเรียนของท่านแสดง กรุณาติดต่อ<i><strong>ผู้ดูแลระบบ</strong></i>')),
 
                 Components\TextInput::make('education_year')
                     ->label('ปีการศึกษา')

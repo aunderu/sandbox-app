@@ -56,6 +56,7 @@ class InnovationsResource extends Resource
                             ->disabled(fn() => Auth::user()->role === UserRole::SCHOOLADMIN)
                             ->relationship('school', 'school_name_th')
                             ->prefix('โรงเรียน')
+                            ->preload()
                             ->searchable()
                             ->columnSpanFull()
                             ->required()

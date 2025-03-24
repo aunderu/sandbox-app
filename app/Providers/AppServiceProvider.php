@@ -14,6 +14,7 @@ use Modules\Dashboard\Policies\BasicSubjectAssessmentPolicy;
 use Modules\Dashboard\Policies\CoreCompetencyAssessmentPolicy;
 use Modules\Dashboard\Policies\InnovationPolicy;
 use Modules\Dashboard\Policies\InnovationTypePolicy;
+use Modules\Dashboard\Policies\ParticipantPolicy;
 use Modules\Dashboard\Policies\SchoolPolicy;
 use Modules\Dashboard\Policies\StudentNumberPolicy;
 use Modules\Dashboard\Policies\UserPolicy;
@@ -21,6 +22,7 @@ use Modules\Sandbox\Models\BasicSubjectAssessmentModel;
 use Modules\Sandbox\Models\CoreCompetencyAssessmentModel;
 use Modules\Sandbox\Models\InnovationsModel;
 use Modules\Sandbox\Models\InnovationTypesModel;
+use Modules\Sandbox\Models\ParticipantModel;
 use Modules\Sandbox\Models\SchoolModel;
 use Modules\Sandbox\Models\StudentNumberModel;
 
@@ -50,6 +52,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(StudentNumberModel::class, StudentNumberPolicy::class);
         Gate::policy(BasicSubjectAssessmentModel::class, BasicSubjectAssessmentPolicy::class);
         Gate::policy(CoreCompetencyAssessmentModel::class, CoreCompetencyAssessmentPolicy::class);
+        Gate::policy(ParticipantModel::class, ParticipantPolicy::class);
 
         Filament::serving(function () {
             $this->registerNavigationItems();

@@ -159,7 +159,7 @@ class StudentNumberResource extends Resource
 
                 Tables\Filters\SelectFilter::make('grade_id')
                     ->label('ระดับชั้น')
-                    ->multiple() // เปลี่ยนเป็นแบบเลือกได้หลายค่า
+                    ->multiple() 
                     ->options(GradeLevelsModel::pluck('grade_name', 'id'))
                     ->searchable()
                     ->preload()

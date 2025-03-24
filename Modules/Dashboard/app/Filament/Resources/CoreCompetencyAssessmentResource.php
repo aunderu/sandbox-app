@@ -15,6 +15,7 @@ use Filament\Tables\Columns as Columns;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\HtmlString;
 use Modules\Dashboard\Filament\Resources\CoreCompetencyAssessmentResource\Pages;
 use Modules\Dashboard\Filament\Resources\CoreCompetencyAssessmentResource\Widgets\CoreCompetencyRadarChart;
 use Modules\Sandbox\Models\CoreCompetencyAssessmentModel;
@@ -62,6 +63,7 @@ class CoreCompetencyAssessmentResource extends Resource
                     ->disabled(fn() => Auth::user()->role === UserRole::SCHOOLADMIN)
                     ->relationship('school', 'school_name_th')
                     ->prefix('โรงเรียน')
+                    ->preload()
                     ->searchable()
                     ->required()
                     ->default(fn() => Auth::user()->school_id)
@@ -81,7 +83,8 @@ class CoreCompetencyAssessmentResource extends Resource
                                     ->send();
                             }
                         }
-                    }),
+                    })
+                    ->helperText(new HtmlString('กรณีที่ไม่มีชื่อโรงเรียนของท่านแสดง กรุณาติดต่อ<i><strong>ผู้ดูแลระบบ</strong></i>')),
 
                 Components\TextInput::make('education_year')
                     ->label('ปีการศึกษา')
